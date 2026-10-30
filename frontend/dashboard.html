@@ -191,8 +191,9 @@
       }
     }
 
+    loadDashboardData();
     AIStudioAuth.onStateChange((u) => {
-      if (u) loadDashboardData();
+      loadDashboardData();
     });
   </script>
 </body>

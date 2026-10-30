@@ -190,17 +190,19 @@ def generate_image():
         elif code == "ALL_PROVIDERS_UNAVAILABLE":
             status_code = 503
 
+        safe_result = {k: v for k, v in result.items() if k not in ("error", "code") and not isinstance(v, bytes)}
         return jsonify({
             "success": False,
             "error": result.get("error", "Image generation failed."),
             "code": code,
-            **{k: v for k, v in result.items() if k not in ("error", "code")},
+            **safe_result,
         }), status_code
 
     # Return result with saved gallery record
+    safe_result = {k: v for k, v in result.items() if not isinstance(v, bytes)}
     return jsonify({
         "success": True,
-        **result
+        **safe_result
     })
 
 

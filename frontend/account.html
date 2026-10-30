@@ -176,26 +176,35 @@
     lucide.createIcons();
 
     AIStudioAuth.onStateChange(async (user) => {
-      if (!user) return;
-
-      const name = user.displayName || user.email.split("@")[0];
-      document.getElementById("profile-name").textContent = name;
-      document.getElementById("profile-email").textContent = user.email;
-      document.getElementById("profile-avatar").textContent = name.charAt(0).toUpperCase();
-      document.getElementById("profile-uid").textContent = `UID: ${user.uid.slice(0, 10)}...`;
-
       const vBadge = document.getElementById("badge-verified");
-      if (user.emailVerified) {
-        vBadge.textContent = "Email Verified";
-        vBadge.style.background = "rgba(16,185,129,0.15)";
-        vBadge.style.color = "#6ee7b7";
+
+      if (user) {
+        const name = user.displayName || user.email.split("@")[0];
+        document.getElementById("profile-name").textContent = name;
+        document.getElementById("profile-email").textContent = user.email;
+        document.getElementById("profile-avatar").textContent = name.charAt(0).toUpperCase();
+        document.getElementById("profile-uid").textContent = `UID: ${user.uid.slice(0, 10)}...`;
+
+        if (user.emailVerified) {
+          vBadge.textContent = "Email Verified";
+          vBadge.style.background = "rgba(16,185,129,0.15)";
+          vBadge.style.color = "#6ee7b7";
+        } else {
+          vBadge.textContent = "Unverified Email";
+          vBadge.style.background = "rgba(245,158,11,0.15)";
+          vBadge.style.color = "#fcd34d";
+        }
       } else {
-        vBadge.textContent = "Unverified Email";
-        vBadge.style.background = "rgba(245,158,11,0.15)";
-        vBadge.style.color = "#fcd34d";
+        document.getElementById("profile-name").textContent = "Guest Creator";
+        document.getElementById("profile-email").textContent = "Instant Mode (No login required)";
+        document.getElementById("profile-avatar").textContent = "G";
+        document.getElementById("profile-uid").textContent = "Session: Local Guest";
+        vBadge.textContent = "⚡ Instant Access";
+        vBadge.style.background = "rgba(139,92,246,0.18)";
+        vBadge.style.color = "#c4b5fd";
       }
 
-      // Fetch Quotas
+      // Fetch Quotas for both guest and authenticated user
       try {
         const res = await AIStudioAuth.authFetch("/api/user/stats");
         if (res.ok) {

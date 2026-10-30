@@ -39,6 +39,11 @@ async function getAuthToken(forceRefresh = false) {
  * Fetch wrapper that automatically attaches Firebase Authorization header.
  */
 async function authFetch(url, options = {}) {
+  let targetUrl = url;
+  if (url.startsWith("/") && window.location.protocol === "file:") {
+    targetUrl = "http://127.0.0.1:5000" + url;
+  }
+
   const token = await getAuthToken();
   const headers = options.headers ? { ...options.headers } : {};
 
@@ -51,19 +56,13 @@ async function authFetch(url, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(targetUrl, {
     ...options,
     headers,
   });
 
   if (response.status === 401) {
-    console.warn("Session expired or unauthorized. Redirecting to login...");
-    // Store return URL
-    const currentPath = window.location.pathname;
-    if (currentPath !== "/login" && currentPath !== "/register" && currentPath !== "/") {
-      sessionStorage.setItem("auth_redirect", currentPath);
-      window.location.href = "/login";
-    }
+    console.warn("API returned 401 (unauthenticated). Continuing in guest mode.");
   }
 
   return response;

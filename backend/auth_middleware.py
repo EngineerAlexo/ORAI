@@ -28,26 +28,29 @@ def extract_token_from_request() -> str:
 def require_auth(f):
     """
     Decorator to protect endpoints.
-    Requires a valid Firebase ID token in Authorization header.
-    Attaches user data to `request.user` and `g.user`.
+    If a valid Firebase ID token is provided, attaches the authenticated user.
+    If no token or invalid token is provided, gracefully falls back to a guest user
+    session so users can immediately generate without friction.
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         token = extract_token_from_request()
-        if not token:
-            return jsonify({
-                "success": False,
-                "error": "Authentication required. Please log in to access AI Studio features.",
-                "code": "AUTH_REQUIRED",
-            }), 401
+        user = None
+        if token:
+            user = verify_firebase_token(token)
 
-        user = verify_firebase_token(token)
         if not user:
-            return jsonify({
-                "success": False,
-                "error": "Invalid or expired session. Please log in again.",
-                "code": "INVALID_TOKEN",
-            }), 401
+            # Create a consistent guest identity from client IP
+            raw_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
+            client_ip = raw_ip.split(",")[0].strip()
+            clean_ip = "".join(c for c in client_ip if c.isalnum() or c in ("-", "_")) or "127_0_0_1"
+            guest_uid = f"guest_{clean_ip}"
+            user = {
+                "uid": guest_uid,
+                "email": "guest@aistudio.local",
+                "name": "Guest Creator",
+                "is_guest": True,
+            }
 
         # Attach user to request context
         request.user = user

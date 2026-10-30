@@ -32,7 +32,6 @@ wheels/
 # IDE & OS
 .vscode/
 .idea/
-*.swp
-*.swo
-Thumbs.db
-.DS_Store
+# Generated User Media & Uploads
+backend/uploads/
+uploads/

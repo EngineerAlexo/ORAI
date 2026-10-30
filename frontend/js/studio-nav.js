@@ -4,11 +4,6 @@
  */
 
 (function () {
-  // Enforce authentication on all studio pages
-  if (window.AIStudioAuth) {
-    window.AIStudioAuth.requireAuth("/login");
-  }
-
   // Restore preferred theme
   const savedTheme = localStorage.getItem("studio_theme") || "dark";
   document.documentElement.setAttribute("data-theme", savedTheme);
@@ -58,27 +53,38 @@
   function initUserState() {
     if (!window.AIStudioAuth) return;
 
-    window.AIStudioAuth.onStateChange((user) => {
-      if (!user) return;
-
-      const nameEl = document.getElementById("sidebar-user-name");
-      const emailEl = document.getElementById("sidebar-user-email");
-      const avatarEl = document.getElementById("sidebar-user-avatar");
-
-      const displayName = user.displayName || user.email.split("@")[0] || "Creator";
-      if (nameEl) nameEl.textContent = displayName;
-      if (emailEl) emailEl.textContent = user.email;
-      if (avatarEl) avatarEl.textContent = displayName.charAt(0).toUpperCase();
-    });
-
+    const nameEl = document.getElementById("sidebar-user-name");
+    const emailEl = document.getElementById("sidebar-user-email");
+    const avatarEl = document.getElementById("sidebar-user-avatar");
     const logoutBtn = document.getElementById("btn-sidebar-logout");
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", async () => {
-        if (confirm("Are you sure you want to log out of AI Studio?")) {
-          await window.AIStudioAuth.logout();
+
+    window.AIStudioAuth.onStateChange((user) => {
+      if (user) {
+        const displayName = user.displayName || user.email.split("@")[0] || "Creator";
+        if (nameEl) nameEl.textContent = displayName;
+        if (emailEl) emailEl.textContent = user.email;
+        if (avatarEl) avatarEl.textContent = displayName.charAt(0).toUpperCase();
+        if (logoutBtn) {
+          logoutBtn.innerHTML = `<i data-lucide="log-out"></i> Log Out`;
+          logoutBtn.onclick = async () => {
+            if (confirm("Are you sure you want to log out of AI Studio?")) {
+              await window.AIStudioAuth.logout();
+            }
+          };
         }
-      });
-    }
+      } else {
+        if (nameEl) nameEl.textContent = "Guest Creator";
+        if (emailEl) emailEl.textContent = "Instant Mode (25 Free/day)";
+        if (avatarEl) avatarEl.textContent = "G";
+        if (logoutBtn) {
+          logoutBtn.innerHTML = `<i data-lucide="log-in"></i> Sign In to Sync`;
+          logoutBtn.onclick = () => {
+            window.location.href = "/login";
+          };
+        }
+      }
+      if (window.lucide) lucide.createIcons();
+    });
   }
 
   async function fetchUserQuotas() {

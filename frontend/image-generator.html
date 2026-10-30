@@ -353,10 +353,32 @@
           document.getElementById("meta-provider").textContent = data.provider || "ORAI Engine";
           document.getElementById("output-prompt-text").textContent = prompt;
 
-          // Download link
+          // Robust Blob Download handler
           const dBtn = document.getElementById("btn-download-image");
-          dBtn.href = data.image;
-          dBtn.download = `ai-studio-${Date.now()}.jpg`;
+          dBtn.onclick = (e) => {
+            e.preventDefault();
+            try {
+              const arr = data.image.split(',');
+              const mime = arr[0].match(/:(.*?);/)[1];
+              const bstr = atob(arr[1]);
+              let n = bstr.length;
+              const u8arr = new Uint8Array(n);
+              while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+              }
+              const blob = new Blob([u8arr], { type: mime });
+              const blobUrl = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = blobUrl;
+              a.download = `ai-studio-${Date.now()}.jpg`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+            } catch (dlErr) {
+              window.open(data.image, "_blank");
+            }
+          };
 
           // Refresh quota badges
           if (window.refreshQuotas) window.refreshQuotas();

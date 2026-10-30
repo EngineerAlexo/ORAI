@@ -157,8 +157,6 @@ class StudioImageGenerator:
                 model=result.get("model", ""),
             )
             result["media_record"] = media_record
-            result["media_url"] = media_record["url"]
-
         # 5. Record usage
         usage_manager.record_usage(
             user_id=user_id,
@@ -167,6 +165,9 @@ class StudioImageGenerator:
             model=result.get("model", ""),
             success=True,
         )
+
+        # Clean raw_bytes from result dict so it is 100% JSON serializable
+        result.pop("raw_bytes", None)
 
         return True, result
 

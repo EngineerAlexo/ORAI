@@ -1,437 +1,177 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ORAI &mdash; Generative AI Studio</title>
-  <meta name="description" content="ORAI - Ultra-fast, high-fidelity AI Image Generation.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <title>AI Studio &mdash; Next-Gen AI Image & Video Studio</title>
+  <meta name="description" content="AI Studio: State-of-the-art AI Image and Video Studio powered by FLUX.1, Gemini, and hosted video models with Firebase Authentication.">
+  <link rel="stylesheet" href="/css/studio.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <style>
+    .landing-hero {
+      padding: 6rem 1.5rem 4rem;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .landing-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 1.15rem;
+      border-radius: var(--radius-full);
+      background: rgba(139, 92, 246, 0.12);
+      border: 1px solid rgba(139, 92, 246, 0.35);
+      color: #c4b5fd;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+    .landing-title {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 1.25rem;
+    }
+    .landing-subtitle {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.6;
+    }
+    .feature-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.5rem;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    }
+    .feature-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 1.3rem;
+    }
+  </style>
 </head>
-
 <body>
-  <!-- Ambient Aurora Glow Orbs in Background -->
-  <div class="ambient-glow-orb orb-1"></div>
-  <div class="ambient-glow-orb orb-2"></div>
-  <div class="ambient-glow-orb orb-3"></div>
+  <!-- Landing Topbar -->
+  <header class="studio-topbar" style="max-width: 1300px; margin: 0 auto; background: transparent; border: none; padding-top: 1rem;">
+    <div class="studio-logo">
+      <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+      <span>AI Studio</span>
+    </div>
 
-  <!-- Minimalist Floating Header -->
-  <header class="navbar" id="main-nav">
-    <div class="nav-container">
-      <div class="brand">
-        <div class="brand-logo-mark">
-          <span class="logo-letter">O</span>
-          <div class="logo-glow"></div>
-        </div>
-        <span class="brand-title">ORAI</span>
-      </div>
-
-      <div class="nav-actions">
-        <!-- Discreet connection dot (tooltip shows details) -->
-        <div class="status-indicator-dot" id="api-status-badge" title="ORAI Engine Status">
-          <span class="status-dot-pulse"></span>
-          <span class="status-dot-inner"></span>
-          <span class="status-label hidden" id="api-status-text">Ready</span>
-        </div>
-
-        <a href="#gallery-section" class="nav-icon-btn nav-gallery-btn" id="nav-gallery-btn" title="Gallery">
-          <i data-lucide="image"></i>
-          <span class="gallery-counter" id="nav-gallery-count">0</span>
-        </a>
-      </div>
+    <div class="topbar-actions" id="landing-auth-actions">
+      <a href="/login" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem;">Sign In</a>
+      <a href="/register" class="btn-primary-studio" style="width: auto; padding: 0.55rem 1.35rem; font-size: 0.88rem;">Create Account</a>
     </div>
   </header>
 
-  <!-- Notification Banner (Hidden by default when configured) -->
-  <div class="banner-container" id="banner-container">
-    <div class="alert-banner warning-banner hidden" id="missing-credentials-banner">
-      <div class="banner-icon"><i data-lucide="alert-triangle"></i></div>
-      <div class="banner-content">
-        <strong>Configuration Required:</strong> Cloudflare credentials missing in <code>.env</code>.
-      </div>
-      <button class="banner-action-btn" id="btn-open-config-guide">Setup</button>
-      <button class="banner-close-btn" id="btn-close-banner">&times;</button>
+  <!-- Hero Section -->
+  <section class="landing-hero">
+    <div class="landing-badge">
+      <i data-lucide="zap"></i> Powered by FLUX.1 Schnell & Advanced Video Engines
     </div>
-  </div>
+    
+    <h1 class="landing-title">
+      Turn Imagination Into <br>
+      <span style="background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Breathtaking Art & Video
+      </span>
+    </h1>
 
-  <!-- Main Canvas -->
-  <main class="app-main">
-    <div class="container">
+    <p class="landing-subtitle">
+      A unified creative AI studio for photorealistic 8K imagery, cinematic stills, and high-definition video synthesis with private cloud galleries.
+    </p>
 
-      <!-- Generator Studio Card -->
-      <section class="generator-card" id="generator-section">
-
-        <!-- Prompt Box Area -->
-        <div class="prompt-box-area">
-          <div class="prompt-box-header">
-            <div class="box-tag">
-              <i data-lucide="sparkles"></i>
-              <span>Prompt Engine</span>
-            </div>
-            <div class="prompt-actions">
-              <button type="button" class="action-chip surprise-chip" id="btn-surprise"
-                title="Surprise with a creative prompt">
-                <i data-lucide="dices"></i>
-                <span>Surprise Me</span>
-              </button>
-              <button type="button" class="action-chip clear-chip" id="btn-clear-prompt" title="Clear input">
-                <i data-lucide="x"></i>
-                <span>Clear</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="textarea-container">
-            <textarea id="prompt-input" class="prompt-textarea"
-              placeholder="Describe what you want to visualize... (e.g. Cyberpunk samurai under neon rain, bioluminescent dragon in crystalline cave, 8k cinematic masterpiece)"
-              maxlength="2000" rows="3"></textarea>
-            <div class="char-counter">
-              <span id="char-count">0</span> / 2000
-            </div>
-          </div>
-
-          <!-- Quick Suggestion Chips -->
-          <div class="prompt-pills" id="prompt-pills">
-            <button type="button" class="pill-btn"
-              data-prompt="Futuristic neo-Tokyo alley at twilight with purple and cyan neon signs reflections in rain puddles, cinematic masterwork">🌆
-              Neo Tokyo</button>
-            <button type="button" class="pill-btn"
-              data-prompt="Adorable fluffy baby red panda wearing tiny knitted winter scarf in snowy enchanted forest, soft warm light">🐼
-              Red Panda</button>
-            <button type="button" class="pill-btn"
-              data-prompt="Astronaut floating in deep space surrounded by glowing violet cosmic nebula and spiral galaxies">🚀
-              Cosmic Nebula</button>
-            <button type="button" class="pill-btn"
-              data-prompt="Cozy sunlit artisan coffee shop interior with plants, steaming latte art, warm morning light">☕
-              Sunlit Cafe</button>
-            <button type="button" class="pill-btn"
-              data-prompt="Mythical crystal dragon sleeping in an amethyst cave with glowing volumetric light, 8k render">🐉
-              Crystal Dragon</button>
-          </div>
-        </div>
-
-        <!-- Controls: Style & Aspect Ratio -->
-        <div class="controls-container">
-
-          <!-- Style Selectors -->
-          <div class="control-group">
-            <div class="control-label">
-              <i data-lucide="palette"></i>
-              <span>Style</span>
-            </div>
-            <div class="options-grid style-grid" id="style-options">
-
-              <button type="button" class="option-card active" data-style="realistic">
-                <div class="option-icon realistic-icon">
-                  <i data-lucide="camera"></i>
-                </div>
-                <div class="option-details">
-                  <span class="option-name">Realistic</span>
-                  <span class="option-sub">8K Photo</span>
-                </div>
-              </button>
-
-              <button type="button" class="option-card" data-style="anime">
-                <div class="option-icon anime-icon">
-                  <i data-lucide="sparkle"></i>
-                </div>
-                <div class="option-details">
-                  <span class="option-name">Anime</span>
-                  <span class="option-sub">Japanese Art</span>
-                </div>
-              </button>
-
-              <button type="button" class="option-card" data-style="cinematic">
-                <div class="option-icon cinematic-icon">
-                  <i data-lucide="clapperboard"></i>
-                </div>
-                <div class="option-details">
-                  <span class="option-name">Cinematic</span>
-                  <span class="option-sub">Movie Still</span>
-                </div>
-              </button>
-
-              <button type="button" class="option-card" data-style="3d">
-                <div class="option-icon render-icon">
-                  <i data-lucide="box"></i>
-                </div>
-                <div class="option-details">
-                  <span class="option-name">3D</span>
-                  <span class="option-sub">Octane Render</span>
-                </div>
-              </button>
-
-            </div>
-          </div>
-
-          <!-- Ratio Selectors -->
-          <div class="control-group">
-            <div class="control-label">
-              <i data-lucide="proportions"></i>
-              <span>Aspect Ratio</span>
-            </div>
-            <div class="options-grid ratio-grid" id="ratio-options">
-
-              <button type="button" class="option-card active" data-ratio="square">
-                <div class="ratio-frame ratio-square"></div>
-                <div class="option-details">
-                  <span class="option-name">1:1</span>
-                  <span class="option-sub">Square</span>
-                </div>
-              </button>
-
-              <button type="button" class="option-card" data-ratio="landscape">
-                <div class="ratio-frame ratio-landscape"></div>
-                <div class="option-details">
-                  <span class="option-name">16:9</span>
-                  <span class="option-sub">Landscape</span>
-                </div>
-              </button>
-
-              <button type="button" class="option-card" data-ratio="portrait">
-                <div class="ratio-frame ratio-portrait"></div>
-                <div class="option-details">
-                  <span class="option-name">9:16</span>
-                  <span class="option-sub">Portrait</span>
-                </div>
-              </button>
-
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Master Generate Action -->
-        <div class="submit-action-bar">
-          <button type="button" class="primary-generate-btn" id="btn-generate">
-            <div class="btn-glow-layer"></div>
-            <span class="btn-content">
-              <i data-lucide="wand-2" class="btn-icon"></i>
-              <span class="btn-text">Generate with ORAI</span>
-            </span>
-            <span class="spinner-loader hidden" id="btn-spinner"></span>
-          </button>
-        </div>
-
-      </section>
-
-      <!-- Active Generation & Output Showcase -->
-      <section class="result-section hidden" id="result-section">
-
-        <!-- Loading State Card -->
-        <div class="result-card loading-card hidden" id="loading-card">
-          <div class="orb-pulsar">
-            <div class="pulsar-wave"></div>
-            <div class="pulsar-center">
-              <i data-lucide="sparkles" class="loading-icon"></i>
-            </div>
-          </div>
-          <h3 class="loading-title" id="loading-status-text">Synthesizing image with ORAI...</h3>
-          <div class="generation-timer" id="generation-timer">Elapsed: 0.0s</div>
-        </div>
-
-        <!-- Success Output Card -->
-        <div class="result-card output-card hidden" id="output-card">
-
-          <!-- Large Prominent Clickable Image Showcase -->
-          <div class="output-showcase">
-            <div class="output-preview-container" id="output-image-wrapper" title="Click to view full image">
-              <img id="generated-image" src="" alt="ORAI Creation" class="output-img" />
-              <div class="preview-click-hint">
-                <i data-lucide="maximize-2"></i>
-                <span>Click to view full screen</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Output Toolbar & Actions -->
-          <div class="output-details-container">
-            <div class="output-meta-row">
-              <span class="meta-tag badge-style" id="meta-style-badge">
-                <i data-lucide="palette"></i>
-                <span id="meta-style-text">Realistic</span>
-              </span>
-              <span class="meta-tag badge-ratio" id="meta-ratio-badge">
-                <i data-lucide="proportions"></i>
-                <span id="meta-ratio-text">Landscape (16:9)</span>
-              </span>
-              <span class="meta-tag badge-engine">
-                <i data-lucide="cpu"></i>
-                <span id="meta-engine-text">ORAI Engine</span>
-              </span>
-            </div>
-
-            <!-- Main Actions Row -->
-            <div class="output-actions-row">
-              <button type="button" class="btn-action btn-download" id="btn-download">
-                <i data-lucide="download"></i>
-                <span>Download Image</span>
-              </button>
-
-              <button type="button" class="btn-action btn-fullscreen-view" id="btn-fullscreen-view">
-                <i data-lucide="maximize-2"></i>
-                <span>Preview</span>
-              </button>
-
-              <button type="button" class="btn-action btn-secondary" id="btn-generate-another">
-                <i data-lucide="plus"></i>
-                <span>Create Another</span>
-              </button>
-            </div>
-
-            <!-- Compact Prompt Bar (Never squashes the image) -->
-            <div class="output-prompt-box">
-              <div class="prompt-box-header">
-                <span class="prompt-box-label">Prompt</span>
-                <button type="button" class="copy-text-btn" id="btn-copy-prompt" title="Copy to clipboard">
-                  <i data-lucide="copy"></i>
-                  <span>Copy</span>
-                </button>
-              </div>
-              <p class="output-prompt-text" id="output-prompt-display"></p>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- Error Card -->
-        <div class="result-card error-card hidden" id="error-card">
-          <div class="error-icon-box">
-            <i data-lucide="alert-octagon"></i>
-          </div>
-          <h3 class="error-title">Generation Paused</h3>
-          <p class="error-message" id="error-message-text">An error occurred while generating the image.</p>
-          <div class="error-hint" id="error-hint-text"></div>
-          <button type="button" class="btn-action btn-secondary" id="btn-retry">
-            <i data-lucide="rotate-ccw"></i>
-            <span>Retry</span>
-          </button>
-        </div>
-
-      </section>
-
-      <!-- Creations Gallery -->
-      <section class="gallery-section" id="gallery-section">
-        <div class="section-header">
-          <div class="section-title-wrap">
-            <h2 class="section-title">
-              <i data-lucide="grid"></i>
-              <span>Creations Gallery</span>
-            </h2>
-          </div>
-          <button type="button" class="clear-gallery-btn" id="btn-clear-gallery" title="Clear gallery history">
-            <i data-lucide="trash-2"></i>
-            <span>Clear</span>
-          </button>
-        </div>
-
-        <!-- Gallery Grid -->
-        <div class="gallery-grid" id="gallery-grid">
-          <!-- Populated dynamically via JavaScript -->
-        </div>
-
-        <!-- Empty Gallery State -->
-        <div class="gallery-empty" id="gallery-empty">
-          <div class="empty-icon-circle">
-            <i data-lucide="image"></i>
-          </div>
-          <h4 class="empty-title">No images created yet</h4>
-          <p class="empty-desc">Your generated artwork will appear here during this session.</p>
-        </div>
-
-      </section>
-
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+      <a href="/image-generator" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem;">
+        <i data-lucide="image"></i> Launch Image Studio
+      </a>
+      <a href="/video-generator" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+        <i data-lucide="video"></i> Launch Video Studio
+      </a>
     </div>
-  </main>
+  </section>
 
-  <!-- Fullscreen Lightbox Modal -->
-  <div class="modal-backdrop hidden" id="lightbox-modal">
-    <div class="modal-dialog lightbox-dialog">
-      <button class="modal-close-btn" id="btn-close-lightbox" title="Close">&times;</button>
-      <div class="lightbox-img-wrapper">
-        <img id="lightbox-img" src="" alt="Fullscreen preview" />
-      </div>
-      <div class="lightbox-footer">
-        <p class="lightbox-prompt" id="lightbox-prompt"></p>
-        <button class="btn-action btn-download" id="btn-lightbox-download">
-          <i data-lucide="download"></i>
-          <span>Download</span>
-        </button>
-      </div>
+  <!-- Features Grid -->
+  <section class="feature-card-grid">
+    <div class="feature-card">
+      <div class="feature-icon-box" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);"><i data-lucide="image"></i></div>
+      <h3 style="font-size: 1.25rem; font-weight: 800;">Next-Gen Image Studio</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+        Synthesize ultra-detailed imagery across Realistic, Anime, Cinematic, 3D, and Wildlife Photography styles with custom aspect ratios (1:1, 16:9, 9:16, 4:3).
+      </p>
     </div>
-  </div>
 
-  <!-- Settings / API Modal -->
-  <div class="modal-backdrop hidden" id="api-modal">
-    <div class="modal-dialog config-dialog">
-      <div class="modal-header">
-        <div class="modal-header-icon"><i data-lucide="sliders"></i></div>
-        <div class="modal-header-text">
-          <h3 class="modal-title">ORAI Configuration</h3>
-          <p class="modal-subtitle">Cloudflare Workers AI credentials</p>
-        </div>
-        <button class="modal-close-btn" id="btn-close-api-modal">&times;</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="guide-step">
-          <div class="step-num">1</div>
-          <div class="step-content">
-            <h4>Cloudflare Account ID</h4>
-            <p>From your <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Dashboard</a>
-              sidebar.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-num">2</div>
-          <div class="step-content">
-            <h4>Workers AI API Token</h4>
-            <p>From <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">My Profile
-                &rarr; API Tokens</a> with Workers AI permissions.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-num">3</div>
-          <div class="step-content">
-            <h4>Saved in <code>.env</code></h4>
-            <pre class="code-block"><code>CLOUDFLARE_ACCOUNT_ID=d038...
-CLOUDFLARE_API_TOKEN=cfut_...
-CLOUDFLARE_MODEL=@cf/black-forest-labs/flux-1-schnell</code></pre>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn-action btn-secondary" id="btn-refresh-status">
-          <i data-lucide="refresh-cw"></i>
-          <span>Check Status</span>
-        </button>
-        <button type="button" class="primary-generate-btn modal-done-btn" id="btn-done-modal">
-          <span>Close</span>
-        </button>
-      </div>
+    <div class="feature-card">
+      <div class="feature-icon-box" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"><i data-lucide="film"></i></div>
+      <h3 style="font-size: 1.25rem; font-weight: 800;">AI Video Studio</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+        Generate videos from text descriptions or upload images to animate camera movements and dynamic motion into full MP4 video files.
+      </p>
     </div>
-  </div>
+
+    <div class="feature-card">
+      <div class="feature-icon-box" style="background: linear-gradient(135deg, #10b981, #06b6d4);"><i data-lucide="shield-check"></i></div>
+      <h3 style="font-size: 1.25rem; font-weight: 800;">Firebase Auth & Privacy</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+        Secure user registration, cryptographic token verification on the backend, and private isolated galleries so only you can view your creations.
+      </p>
+    </div>
+  </section>
 
   <!-- Footer -->
-  <footer class="app-footer">
-    <div class="container footer-container">
-      <div class="footer-brand">
-        <strong>ORAI</strong> &bull; Next-Gen Visual Synthesis
-      </div>
-    </div>
+  <footer style="text-align: center; padding: 3rem 1rem; border-top: 1px solid var(--border-subtle); color: var(--text-dim); font-size: 0.85rem;">
+    &copy; 2026 AI Studio. All rights reserved.
   </footer>
 
-  <script src="js/app.js"></script>
-</body>
+  <script>
+    lucide.createIcons();
 
+    // Check if user is already logged in to customize topbar
+    AIStudioAuth.onStateChange(user => {
+      const authActions = document.getElementById("landing-auth-actions");
+      if (user) {
+        authActions.innerHTML = `
+          <a href="/dashboard" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem; color: var(--primary-violet); border-color: var(--primary-violet);">
+            <i data-lucide="layout-dashboard"></i> Dashboard
+          </a>
+          <a href="/gallery" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem;">
+            <i data-lucide="folder-heart"></i> Gallery
+          </a>
+        `;
+        lucide.createIcons();
+      }
+    });
+  </script>
+</body>
 </html>

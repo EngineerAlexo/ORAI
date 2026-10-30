@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+</head>
+<body>
+  <div class="auth-page-container">
+    <div class="auth-box">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+        <h1 class="auth-title">Welcome Back</h1>
+        <p class="auth-sub">Sign in to your AI Image & Video Studio account</p>
+      </div>
+
+      <div id="auth-alert" class="auth-alert"></div>
+
+      <form id="login-form">
+        <div class="studio-form-group">
+          <label class="studio-label" for="login-email"><i data-lucide="mail"></i> Email Address</label>
+          <input type="email" id="login-email" class="studio-input" placeholder="you@domain.com" required autocomplete="email">
+        </div>
+
+        <div class="studio-form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+            <label class="studio-label" for="login-password" style="margin-bottom: 0;"><i data-lucide="lock"></i> Password</label>
+            <a href="#" id="btn-forgot-password" style="font-size: 0.8rem; color: var(--primary-violet); font-weight: 600;">Forgot?</a>
+          </div>
+          <input type="password" id="login-password" class="studio-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+
+        <button type="submit" class="btn-primary-studio" id="btn-submit-login" style="max-width: 100%; margin-top: 0.5rem;">
+          <i data-lucide="log-in"></i>
+          <span id="btn-text">Sign In</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Don't have an account yet? <a href="/register">Create Account</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Redirect if already logged in
+    AIStudioAuth.redirectIfAuthenticated("/dashboard");
+
+    const form = document.getElementById("login-form");
+    const alertBox = document.getElementById("auth-alert");
+    const submitBtn = document.getElementById("btn-submit-login");
+    const btnText = document.getElementById("btn-text");
+    const forgotBtn = document.getElementById("btn-forgot-password");
+
+    function showAlert(msg, isError = true) {
+      alertBox.textContent = msg;
+      alertBox.className = "auth-alert " + (isError ? "error" : "success");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+
+      if (!email || !password) {
+        showAlert("Please enter both your email address and password.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnText.textContent = "Authenticating...";
+
+      try {
+        await AIStudioAuth.login(email, password);
+        showAlert("Login successful! Redirecting to studio...", false);
+        const dest = sessionStorage.getItem("auth_redirect") || "/dashboard";
+        sessionStorage.removeItem("auth_redirect");
+        window.location.href = dest;
+      } catch (err) {
+        console.error("Login failed:", err);
+        let msg = "Failed to sign in. Please check your credentials.";
+        if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+          msg = "Incorrect email address or password.";
+        } else if (err.code === "auth/too-many-requests") {
+          msg = "Too many failed attempts. Please reset your password or try again later.";
+        }
+        showAlert(msg, true);
+        submitBtn.disabled = false;
+        btnText.textContent = "Sign In";
+      }
+    });
+
+    forgotBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const email = prompt("Enter your email address to receive a password reset link:");
+      if (!email) return;
+
+      try {
+        await AIStudioAuth.resetPassword(email.trim());
+        showAlert(`Password reset email sent to ${email}. Please check your inbox.`, false);
+      } catch (err) {
+        showAlert("Could not send password reset email: " + err.message, true);
+      }
+    });
+  </script>
+</body>
+</html>

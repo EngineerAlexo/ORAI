@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/studio-nav.js"></script>
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- Sidebar -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-header">
+        <div class="studio-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-label">Core Studio</span>
+        <a href="/dashboard" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="/image-generator" class="nav-item"><i data-lucide="image"></i> Image Studio <span class="nav-badge">FLUX.1</span></a>
+        <a href="/video-generator" class="nav-item"><i data-lucide="video"></i> Video Studio <span class="nav-badge" style="background: rgba(236,72,153,0.3); color:#f472b6;">T2V / I2V</span></a>
+
+        <span class="nav-label">My Workspace</span>
+        <a href="/gallery" class="nav-item"><i data-lucide="folder-heart"></i> My Gallery</a>
+        <a href="/account" class="nav-item active"><i data-lucide="user"></i> My Account</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-snippet">
+          <div class="user-avatar" id="sidebar-user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">Creator</div>
+            <div class="user-email" id="sidebar-user-email">...</div>
+          </div>
+        </div>
+        <button type="button" class="btn-sidebar-logout" id="btn-sidebar-logout"><i data-lucide="log-out"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="studio-main">
+      <header class="studio-topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle"><i data-lucide="menu"></i></button>
+          <div class="topbar-title-wrap">
+            <h2>Account & Settings</h2>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
+        </div>
+      </header>
+
+      <div class="studio-content">
+        <!-- User Profile Card -->
+        <div class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Profile Information</h3>
+              <p>Firebase Authentication user details</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+            <div class="user-avatar" id="profile-avatar" style="width: 72px; height: 72px; font-size: 1.8rem;">U</div>
+            <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+              <h3 id="profile-name" style="font-size: 1.35rem; font-weight: 800;">Creator</h3>
+              <div id="profile-email" style="color: var(--text-muted); font-size: 0.95rem;">user@domain.com</div>
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.25rem;">
+                <span id="badge-verified" style="font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full); background: rgba(16,185,129,0.15); color: #6ee7b7;">
+                  Email Verified
+                </span>
+                <span style="font-size: 0.75rem; color: var(--text-dim);" id="profile-uid">UID: ...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quota & Usage Overview -->
+        <div class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Daily Quotas & Usage Limits</h3>
+              <p>Generation allowances reset every 24 hours (Midnight UTC)</p>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+            <!-- Images Quota -->
+            <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.95rem;"><i data-lucide="image" style="width: 16px; height: 16px; color: var(--primary-violet); vertical-align: middle;"></i> Image Quota</span>
+                <span id="account-img-usage" style="font-weight: 800; color: var(--text-main);">0 / 25</span>
+              </div>
+              <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: var(--radius-full); overflow: hidden; margin-bottom: 0.5rem;">
+                <div id="img-quota-bar" style="width: 0%; height: 100%; background: var(--gradient-btn); border-radius: var(--radius-full);"></div>
+              </div>
+              <div style="font-size: 0.78rem; color: var(--text-dim);" id="img-quota-sub">25 generations remaining today</div>
+            </div>
+
+            <!-- Videos Quota -->
+            <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; font-size: 0.95rem;"><i data-lucide="video" style="width: 16px; height: 16px; color: var(--accent-pink); vertical-align: middle;"></i> Video Quota</span>
+                <span id="account-vid-usage" style="font-weight: 800; color: var(--text-main);">0 / 10</span>
+              </div>
+              <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: var(--radius-full); overflow: hidden; margin-bottom: 0.5rem;">
+                <div id="vid-quota-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ec4899, #8b5cf6); border-radius: var(--radius-full);"></div>
+              </div>
+              <div style="font-size: 0.78rem; color: var(--text-dim);" id="vid-quota-sub">10 generations remaining today</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected AI Engines Status -->
+        <div class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Configured AI Engines</h3>
+              <p>Active backend inference providers</p>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="color: var(--primary-violet);"><i data-lucide="cpu"></i></div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.9rem;">Cloudflare Workers AI (FLUX.1 Schnell)</div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">5-Account pool with automatic rotation on rate limits</div>
+                </div>
+              </div>
+              <span style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">5 Active Accounts</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="color: var(--primary-cyan);"><i data-lucide="zap"></i></div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.9rem;">Pollinations FLUX Turbo</div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">Native widescreen & portrait generation with priority key</div>
+                </div>
+              </div>
+              <span style="background: rgba(16,185,129,0.15); color: #6ee7b7; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">Priority Key Active</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 1rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="color: var(--accent-pink);"><i data-lucide="sparkles"></i></div>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.9rem;">Google Gemini Image API</div>
+                  <div style="font-size: 0.75rem; color: var(--text-dim);">2 API keys configured (Requires Google AI Studio pay-as-you-go billing)</div>
+                </div>
+              </div>
+              <span style="background: rgba(245,158,11,0.15); color: #fcd34d; font-size: 0.75rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: var(--radius-full);">Configured</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    AIStudioAuth.onStateChange(async (user) => {
+      if (!user) return;
+
+      const name = user.displayName || user.email.split("@")[0];
+      document.getElementById("profile-name").textContent = name;
+      document.getElementById("profile-email").textContent = user.email;
+      document.getElementById("profile-avatar").textContent = name.charAt(0).toUpperCase();
+      document.getElementById("profile-uid").textContent = `UID: ${user.uid.slice(0, 10)}...`;
+
+      const vBadge = document.getElementById("badge-verified");
+      if (user.emailVerified) {
+        vBadge.textContent = "Email Verified";
+        vBadge.style.background = "rgba(16,185,129,0.15)";
+        vBadge.style.color = "#6ee7b7";
+      } else {
+        vBadge.textContent = "Unverified Email";
+        vBadge.style.background = "rgba(245,158,11,0.15)";
+        vBadge.style.color = "#fcd34d";
+      }
+
+      // Fetch Quotas
+      try {
+        const res = await AIStudioAuth.authFetch("/api/user/stats");
+        if (res.ok) {
+          const d = await res.json();
+          const s = d.stats || {};
+
+          document.getElementById("account-img-usage").textContent = `${s.today_images} / ${s.image_limit}`;
+          document.getElementById("img-quota-sub").textContent = `${s.image_remaining} images remaining today`;
+          document.getElementById("img-quota-bar").style.width = `${Math.min(100, (s.today_images / s.image_limit) * 100)}%`;
+
+          document.getElementById("account-vid-usage").textContent = `${s.today_videos} / ${s.video_limit}`;
+          document.getElementById("vid-quota-sub").textContent = `${s.video_remaining} videos remaining today`;
+          document.getElementById("vid-quota-bar").style.width = `${Math.min(100, (s.today_videos / s.video_limit) * 100)}%`;
+        }
+      } catch (e) {
+        console.warn("Stats load error:", e);
+      }
+    });
+  </script>
+</body>
+</html>

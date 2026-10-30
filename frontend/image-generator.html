@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Image Studio - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/studio-nav.js"></script>
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- Sidebar -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-header">
+        <div class="studio-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-label">Core Studio</span>
+        <a href="/dashboard" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="/image-generator" class="nav-item active"><i data-lucide="image"></i> Image Studio <span class="nav-badge">FLUX.1</span></a>
+        <a href="/video-generator" class="nav-item"><i data-lucide="video"></i> Video Studio <span class="nav-badge" style="background: rgba(236,72,153,0.3); color:#f472b6;">T2V / I2V</span></a>
+
+        <span class="nav-label">My Workspace</span>
+        <a href="/gallery" class="nav-item"><i data-lucide="folder-heart"></i> My Gallery</a>
+        <a href="/account" class="nav-item"><i data-lucide="user"></i> My Account</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-snippet">
+          <div class="user-avatar" id="sidebar-user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">Creator</div>
+            <div class="user-email" id="sidebar-user-email">...</div>
+          </div>
+        </div>
+        <button type="button" class="btn-sidebar-logout" id="btn-sidebar-logout"><i data-lucide="log-out"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="studio-main">
+      <header class="studio-topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle"><i data-lucide="menu"></i></button>
+          <div class="topbar-title-wrap">
+            <h2>AI Image Studio</h2>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
+        </div>
+      </header>
+
+      <div class="studio-content">
+        <!-- Generator Controls Card -->
+        <section class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Create AI Visuals</h3>
+              <p>Powered by Cloudflare FLUX.1 Schnell, Google Gemini, and Pollinations Turbo</p>
+            </div>
+            <button type="button" class="action-chip surprise-chip" id="btn-surprise">
+              <i data-lucide="wand-2"></i> Surprise Me
+            </button>
+          </div>
+
+          <!-- Prompt Box -->
+          <div class="studio-form-group">
+            <label class="studio-label" for="prompt-input"><i data-lucide="pen-tool"></i> Prompt</label>
+            <textarea id="prompt-input" class="studio-textarea" placeholder="Describe the image you want to synthesize in vivid detail... (e.g. A majestic white tiger resting on mossy rocks beside a mountain waterfall, golden hour photography)"></textarea>
+          </div>
+
+          <!-- Negative Prompt Box -->
+          <div class="studio-form-group">
+            <label class="studio-label" for="negative-prompt-input"><i data-lucide="ban"></i> Negative Prompt (Optional)</label>
+            <input type="text" id="negative-prompt-input" class="studio-input" placeholder="blurry, distorted anatomy, extra limbs, low resolution, bad quality, watermark">
+          </div>
+
+          <!-- Styles Selector -->
+          <div class="studio-form-group">
+            <label class="studio-label"><i data-lucide="palette"></i> Artistic Style</label>
+            <div class="pill-grid" id="style-selector">
+              <div class="pill-option active" data-style="realistic">
+                <span class="pill-icon">📷</span>
+                <span class="pill-name">Realistic</span>
+                <span class="pill-sub">8K Raw Photo</span>
+              </div>
+              <div class="pill-option" data-style="cinematic">
+                <span class="pill-icon">🎬</span>
+                <span class="pill-name">Cinematic</span>
+                <span class="pill-sub">35mm Movie Still</span>
+              </div>
+              <div class="pill-option" data-style="anime">
+                <span class="pill-icon">✨</span>
+                <span class="pill-name">Anime</span>
+                <span class="pill-sub">Studio Animation</span>
+              </div>
+              <div class="pill-option" data-style="3d">
+                <span class="pill-icon">🧊</span>
+                <span class="pill-name">3D Render</span>
+                <span class="pill-sub">Octane Raytrace</span>
+              </div>
+              <div class="pill-option" data-style="digital_art">
+                <span class="pill-icon">🎨</span>
+                <span class="pill-name">Digital Art</span>
+                <span class="pill-sub">ArtStation Concept</span>
+              </div>
+              <div class="pill-option" data-style="fantasy">
+                <span class="pill-icon">🔮</span>
+                <span class="pill-name">Fantasy</span>
+                <span class="pill-sub">Mythical & Ethereal</span>
+              </div>
+              <div class="pill-option" data-style="wildlife">
+                <span class="pill-icon">🦁</span>
+                <span class="pill-name">Wildlife</span>
+                <span class="pill-sub">National Geographic</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aspect Ratio Selector -->
+          <div class="studio-form-group">
+            <label class="studio-label"><i data-lucide="proportions"></i> Aspect Ratio</label>
+            <div class="pill-grid" id="ratio-selector" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
+              <div class="pill-option active" data-ratio="1:1">
+                <div class="ratio-frame ratio-square"></div>
+                <span class="pill-name">1:1 Square</span>
+                <span class="pill-sub">1024 × 1024</span>
+              </div>
+              <div class="pill-option" data-ratio="16:9">
+                <div class="ratio-frame ratio-landscape"></div>
+                <span class="pill-name">16:9 Landscape</span>
+                <span class="pill-sub">1024 × 576</span>
+              </div>
+              <div class="pill-option" data-ratio="9:16">
+                <div class="ratio-frame ratio-portrait"></div>
+                <span class="pill-name">9:16 Portrait</span>
+                <span class="pill-sub">576 × 1024</span>
+              </div>
+              <div class="pill-option" data-ratio="4:3">
+                <div class="ratio-frame" style="width: 24px; height: 18px;"></div>
+                <span class="pill-name">4:3 Photo</span>
+                <span class="pill-sub">1024 × 768</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div style="display: flex; justify-content: center; margin-top: 1rem;">
+            <button type="button" class="btn-primary-studio" id="btn-generate-image">
+              <i data-lucide="sparkles"></i>
+              <span id="btn-gen-text">Generate Image</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Generation Results Section -->
+        <section id="result-container" class="hidden" style="margin-bottom: 2.5rem;">
+          <!-- Loading State -->
+          <div id="loading-card" class="studio-card hidden" style="text-align: center; padding: 3.5rem 1rem;">
+            <div class="orb-pulsar" style="margin: 0 auto 1.5rem;">
+              <div class="pulsar-wave"></div>
+              <div class="pulsar-center"><i data-lucide="sparkles" class="loading-icon"></i></div>
+            </div>
+            <h3 id="loading-text" style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.5rem;">Synthesizing Latents with AI Studio...</h3>
+            <div id="loading-timer" class="generation-timer">Elapsed: 0.0s</div>
+          </div>
+
+          <!-- Output Showcase Card -->
+          <div id="output-card" class="studio-card hidden" style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+            <div class="output-preview-container ratio-1-1" id="output-preview-wrap" style="cursor: pointer; max-width: 720px;" title="Click to view full image">
+              <img id="output-img" src="" alt="AI Output" class="output-img">
+              <div class="preview-click-hint">
+                <i data-lucide="maximize-2"></i>
+                <span>Click to view full screen</span>
+              </div>
+            </div>
+
+            <!-- Metadata & Actions -->
+            <div style="width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="meta-tag" id="meta-style" style="background: rgba(139,92,246,0.15); color: #c4b5fd; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">Realistic</span>
+                <span class="meta-tag" id="meta-ratio" style="background: rgba(6,182,212,0.15); color: #67e8f9; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">1:1</span>
+                <span class="meta-tag" id="meta-provider" style="background: rgba(16,185,129,0.15); color: #6ee7b7; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">Cloudflare Workers AI</span>
+              </div>
+
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a id="btn-download-image" href="#" download="ai-studio.jpg" class="btn-primary-studio" style="width: auto; padding: 0.75rem 1.75rem; font-size: 0.92rem;">
+                  <i data-lucide="download"></i> Download Image
+                </a>
+                <button type="button" id="btn-fullscreen" class="action-chip" style="padding: 0.75rem 1.25rem; font-size: 0.92rem;">
+                  <i data-lucide="maximize-2"></i> Preview
+                </button>
+                <a href="/gallery" class="action-chip" style="padding: 0.75rem 1.25rem; font-size: 0.92rem;">
+                  <i data-lucide="folder-heart"></i> View in Gallery
+                </a>
+              </div>
+
+              <div class="output-prompt-box">
+                <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.25rem;">Prompt</div>
+                <div id="output-prompt-text" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Alert Card -->
+          <div id="error-card" class="studio-card error-card hidden">
+            <i data-lucide="alert-triangle" style="width: 38px; height: 38px; color: #ef4444; margin-bottom: 0.75rem;"></i>
+            <h4 style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">Generation Failed</h4>
+            <p id="error-msg" style="color: #fca5a5; font-size: 0.9rem; max-width: 500px; margin-bottom: 1rem;"></p>
+            <button type="button" class="btn-primary-studio" id="btn-retry" style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.88rem;">Try Again</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Fullscreen Modal -->
+  <div class="modal-backdrop hidden" id="fullscreen-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem;">
+    <button id="btn-close-modal" style="position: absolute; top: 1.5rem; right: 1.5rem; font-size: 2rem; color: #fff; z-index: 10;">&times;</button>
+    <img id="modal-img" src="" alt="Fullscreen view" style="max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: var(--radius-md);">
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Surprise prompts
+    const SURPRISE_PROMPTS = [
+      "A magnificent celestial dragon slumbering atop a glowing amethyst mountain under aurora borealis",
+      "Cinematic portrait of an Ethiopian warrior with lion beside him in the golden highlands",
+      "Macro photograph of a mechanical steampunk butterfly perched on a dewy luminescent flower",
+      "A futuristic neon-drenched Tokyo street in the rain with flying cyberpunk vehicles",
+      "An adorable baby red panda astronaut gazing through spaceship window at a spiral galaxy"
+    ];
+
+    let selectedStyle = "realistic";
+    let selectedRatio = "1:1";
+    let timerInterval = null;
+    let currentImageBlob = null;
+
+    // Style picker
+    document.querySelectorAll("#style-selector .pill-option").forEach(card => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll("#style-selector .pill-option").forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        selectedStyle = card.dataset.style;
+      });
+    });
+
+    // Ratio picker
+    document.querySelectorAll("#ratio-selector .pill-option").forEach(card => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll("#ratio-selector .pill-option").forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        selectedRatio = card.dataset.ratio;
+      });
+    });
+
+    // Surprise Me
+    document.getElementById("btn-surprise").addEventListener("click", () => {
+      const idx = Math.floor(Math.random() * SURPRISE_PROMPTS.length);
+      document.getElementById("prompt-input").value = SURPRISE_PROMPTS[idx];
+    });
+
+    // Generate Action
+    document.getElementById("btn-generate-image").addEventListener("click", handleGenerate);
+    document.getElementById("btn-retry").addEventListener("click", handleGenerate);
+
+    async function handleGenerate() {
+      const prompt = document.getElementById("prompt-input").value.trim();
+      const negativePrompt = document.getElementById("negative-prompt-input").value.trim();
+
+      if (!prompt) {
+        alert("Please enter a prompt describing your image.");
+        document.getElementById("prompt-input").focus();
+        return;
+      }
+
+      const resultContainer = document.getElementById("result-container");
+      const loadingCard = document.getElementById("loading-card");
+      const outputCard = document.getElementById("output-card");
+      const errorCard = document.getElementById("error-card");
+      const genBtn = document.getElementById("btn-generate-image");
+      const btnText = document.getElementById("btn-gen-text");
+
+      resultContainer.classList.remove("hidden");
+      loadingCard.classList.remove("hidden");
+      outputCard.classList.add("hidden");
+      errorCard.classList.add("hidden");
+      genBtn.disabled = true;
+      btnText.textContent = "Synthesizing...";
+
+      // Scroll to result
+      resultContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Start elapsed timer
+      let startTime = Date.now();
+      const timerEl = document.getElementById("loading-timer");
+      const statusText = document.getElementById("loading-text");
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const sec = ((Date.now() - startTime) / 1000).toFixed(1);
+        timerEl.textContent = `Elapsed: ${sec}s`;
+        if (sec > 2.0 && sec < 5.0) statusText.textContent = "Refining composition, lighting, and textures...";
+        else if (sec >= 5.0 && sec < 9.0) statusText.textContent = "Denoising pixels and finalizing image output...";
+        else if (sec >= 9.0) statusText.textContent = "Optimizing quality and transferring image bytes...";
+      }, 100);
+
+      try {
+        const response = await AIStudioAuth.authFetch("/api/generate", {
+          method: "POST",
+          body: JSON.stringify({
+            prompt: prompt,
+            negative_prompt: negativePrompt,
+            style: selectedStyle,
+            aspect_ratio: selectedRatio,
+            steps: 8
+          })
+        });
+
+        clearInterval(timerInterval);
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          loadingCard.classList.add("hidden");
+          outputCard.classList.remove("hidden");
+
+          // Display image
+          const outputImg = document.getElementById("output-img");
+          outputImg.src = data.image;
+          currentImageBlob = data.image;
+
+          // Aspect ratio class
+          const wrap = document.getElementById("output-preview-wrap");
+          wrap.className = `output-preview-container ratio-${selectedRatio.replace(":", "-")}`;
+
+          // Metadata tags
+          document.getElementById("meta-style").textContent = selectedStyle.replace("_", " ").toUpperCase();
+          document.getElementById("meta-ratio").textContent = selectedRatio;
+          document.getElementById("meta-provider").textContent = data.provider || "ORAI Engine";
+          document.getElementById("output-prompt-text").textContent = prompt;
+
+          // Download link
+          const dBtn = document.getElementById("btn-download-image");
+          dBtn.href = data.image;
+          dBtn.download = `ai-studio-${Date.now()}.jpg`;
+
+          // Refresh quota badges
+          if (window.refreshQuotas) window.refreshQuotas();
+        } else {
+          loadingCard.classList.add("hidden");
+          errorCard.classList.remove("hidden");
+          document.getElementById("error-msg").textContent = data.error || "An unexpected error occurred during synthesis.";
+        }
+      } catch (err) {
+        clearInterval(timerInterval);
+        loadingCard.classList.add("hidden");
+        errorCard.classList.remove("hidden");
+        document.getElementById("error-msg").textContent = "Network error connecting to AI Studio server. Please retry.";
+      } finally {
+        genBtn.disabled = false;
+        btnText.textContent = "Generate Image";
+        lucide.createIcons();
+      }
+    }
+
+    // Fullscreen lightbox
+    const modal = document.getElementById("fullscreen-modal");
+    const modalImg = document.getElementById("modal-img");
+
+    function openModal() {
+      if (!currentImageBlob) return;
+      modalImg.src = currentImageBlob;
+      modal.style.display = "flex";
+    }
+
+    document.getElementById("output-preview-wrap").addEventListener("click", openModal);
+    document.getElementById("btn-fullscreen").addEventListener("click", openModal);
+    document.getElementById("btn-close-modal").addEventListener("click", () => modal.style.display = "none");
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    });
+  </script>
+</body>
+</html>

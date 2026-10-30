@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Gallery - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/studio-nav.js"></script>
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- Sidebar -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-header">
+        <div class="studio-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-label">Core Studio</span>
+        <a href="/dashboard" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="/image-generator" class="nav-item"><i data-lucide="image"></i> Image Studio <span class="nav-badge">FLUX.1</span></a>
+        <a href="/video-generator" class="nav-item"><i data-lucide="video"></i> Video Studio <span class="nav-badge" style="background: rgba(236,72,153,0.3); color:#f472b6;">T2V / I2V</span></a>
+
+        <span class="nav-label">My Workspace</span>
+        <a href="/gallery" class="nav-item active"><i data-lucide="folder-heart"></i> My Gallery</a>
+        <a href="/account" class="nav-item"><i data-lucide="user"></i> My Account</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-snippet">
+          <div class="user-avatar" id="sidebar-user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">Creator</div>
+            <div class="user-email" id="sidebar-user-email">...</div>
+          </div>
+        </div>
+        <button type="button" class="btn-sidebar-logout" id="btn-sidebar-logout"><i data-lucide="log-out"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="studio-main">
+      <header class="studio-topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle"><i data-lucide="menu"></i></button>
+          <div class="topbar-title-wrap">
+            <h2>Personal Gallery</h2>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
+        </div>
+      </header>
+
+      <div class="studio-content">
+        <!-- Gallery Header & Filter Tabs -->
+        <div class="gallery-filter-bar">
+          <div class="mode-tabs" style="margin-bottom: 0;">
+            <button type="button" class="mode-tab active" id="tab-all" data-type="">
+              <i data-lucide="layers"></i> All Media
+            </button>
+            <button type="button" class="mode-tab" id="tab-images" data-type="image">
+              <i data-lucide="image"></i> Images
+            </button>
+            <button type="button" class="mode-tab" id="tab-videos" data-type="video">
+              <i data-lucide="video"></i> Videos
+            </button>
+          </div>
+
+          <div style="font-size: 0.88rem; color: var(--text-muted);" id="gallery-count-text">
+            Loading creations...
+          </div>
+        </div>
+
+        <!-- Media Grid -->
+        <div class="gallery-grid" id="gallery-container">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Media Fullscreen Lightbox / Video Modal -->
+  <div class="modal-backdrop hidden" id="media-modal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem;">
+    <button id="btn-close-media-modal" style="position: absolute; top: 1.5rem; right: 1.5rem; font-size: 2rem; color: #fff; z-index: 10;">&times;</button>
+    
+    <div style="max-width: 90vw; max-height: 85vh; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+      <div id="modal-media-content" style="max-width: 100%; max-height: 75vh; border-radius: var(--radius-md); overflow: hidden;">
+        <!-- Image or Video tag inserted here -->
+      </div>
+      <p id="modal-caption" style="color: #cbd5e1; font-size: 0.9rem; max-width: 650px; text-align: center; line-height: 1.4;"></p>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let allGalleryItems = [];
+    let activeFilter = "";
+
+    // Parse URL param if any (e.g. ?type=video)
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialType = urlParams.get("type");
+    if (initialType === "video") {
+      activeFilter = "video";
+      document.getElementById("tab-videos").classList.add("active");
+      document.getElementById("tab-all").classList.remove("active");
+    }
+
+    // Filter tab buttons
+    document.querySelectorAll(".gallery-filter-bar .mode-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".gallery-filter-bar .mode-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        activeFilter = tab.dataset.type;
+        renderGallery();
+      });
+    });
+
+    async function fetchGallery() {
+      const container = document.getElementById("gallery-container");
+      try {
+        const res = await AIStudioAuth.authFetch("/api/gallery");
+        if (!res.ok) throw new Error("Could not load gallery.");
+
+        const data = await res.json();
+        allGalleryItems = data.gallery || [];
+        renderGallery();
+      } catch (err) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: #fca5a5;">
+            <i data-lucide="alert-circle" style="width: 36px; height: 36px; margin-bottom: 0.5rem;"></i>
+            <p>${err.message}</p>
+          </div>`;
+        lucide.createIcons();
+      }
+    }
+
+    function renderGallery() {
+      const container = document.getElementById("gallery-container");
+      const countEl = document.getElementById("gallery-count-text");
+
+      const filtered = activeFilter
+        ? allGalleryItems.filter(item => item.type === activeFilter)
+        : allGalleryItems;
+
+      countEl.textContent = `Showing ${filtered.length} creation${filtered.length === 1 ? '' : 's'}`;
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
+            <i data-lucide="folder-open" style="width: 48px; height: 48px; opacity: 0.35; margin-bottom: 0.75rem;"></i>
+            <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">No creations found</h3>
+            <p style="font-size: 0.88rem;">Start synthesizing images and videos to populate your personal studio archive.</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const isVideo = item.type === "video";
+        return `
+          <div class="gallery-card" data-id="${item.id}">
+            <div class="gallery-media-thumb" onclick="openMediaModal('${item.id}')">
+              ${isVideo 
+                ? `<video src="${item.url}" muted playsinline></video>
+                   <div style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(0,0,0,0.65); padding: 0.2rem 0.5rem; border-radius: var(--radius-sm); font-size: 0.7rem; font-weight: 700; color: #f472b6; display: flex; align-items: center; gap: 0.3rem;">
+                     <i data-lucide="play" style="width: 12px; height: 12px;"></i> VIDEO
+                   </div>`
+                : `<img src="${item.url}" alt="Creation" loading="lazy">`
+              }
+            </div>
+            <div class="gallery-card-body">
+              <div class="gallery-card-prompt" title="${item.prompt}">${item.prompt}</div>
+              
+              <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <span style="font-size: 0.7rem; font-weight: 700; color: var(--primary-violet); background: rgba(139,92,246,0.12); padding: 0.15rem 0.45rem; border-radius: var(--radius-sm);">
+                  ${item.provider ? item.provider.split('(')[0].trim() : 'AI Studio'}
+                </span>
+                <span style="font-size: 0.7rem; color: var(--text-dim); background: rgba(255,255,255,0.04); padding: 0.15rem 0.45rem; border-radius: var(--radius-sm);">
+                  ${item.aspect_ratio || '1:1'}
+                </span>
+              </div>
+
+              <div class="gallery-card-actions">
+                <span style="font-size: 0.72rem; color: var(--text-dim);">
+                  ${item.created_at_iso ? item.created_at_iso.split('T')[0] : 'Recent'}
+                </span>
+                <div style="display: flex; gap: 0.4rem;">
+                  <a href="${item.url}" download class="action-chip" style="padding: 0.3rem 0.6rem;" title="Download File">
+                    <i data-lucide="download"></i>
+                  </a>
+                  <button type="button" class="action-chip" style="padding: 0.3rem 0.6rem; color: #ef4444;" onclick="deleteItem('${item.id}')" title="Delete">
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      lucide.createIcons();
+    }
+
+    async function deleteItem(mediaId) {
+      if (!confirm("Are you sure you want to permanently delete this creation?")) return;
+
+      try {
+        const res = await AIStudioAuth.authFetch(`/api/gallery/${mediaId}`, { method: "DELETE" });
+        if (res.ok) {
+          allGalleryItems = allGalleryItems.filter(i => i.id !== mediaId);
+          renderGallery();
+        } else {
+          alert("Could not delete item.");
+        }
+      } catch (e) {
+        alert("Delete failed: " + e.message);
+      }
+    }
+
+    function openMediaModal(mediaId) {
+      const item = allGalleryItems.find(i => i.id === mediaId);
+      if (!item) return;
+
+      const modal = document.getElementById("media-modal");
+      const content = document.getElementById("modal-media-content");
+      const caption = document.getElementById("modal-caption");
+
+      if (item.type === "video") {
+        content.innerHTML = `<video src="${item.url}" controls autoplay playsinline style="max-width: 90vw; max-height: 75vh; border-radius: var(--radius-md);"></video>`;
+      } else {
+        content.innerHTML = `<img src="${item.url}" alt="Creation" style="max-width: 90vw; max-height: 75vh; object-fit: contain; border-radius: var(--radius-md);">`;
+      }
+
+      caption.textContent = item.prompt;
+      modal.style.display = "flex";
+    }
+
+    document.getElementById("btn-close-media-modal").addEventListener("click", () => {
+      document.getElementById("media-modal").style.display = "none";
+      document.getElementById("modal-media-content").innerHTML = "";
+    });
+
+    document.getElementById("media-modal").addEventListener("click", (e) => {
+      if (e.target.id === "media-modal") {
+        document.getElementById("media-modal").style.display = "none";
+        document.getElementById("modal-media-content").innerHTML = "";
+      }
+    });
+
+    AIStudioAuth.onStateChange(u => {
+      if (u) fetchGallery();
+    });
+  </script>
+</body>
+</html>

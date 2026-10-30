@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+</head>
+<body>
+  <div class="auth-page-container">
+    <div class="auth-box">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+        <h1 class="auth-title">Create Account</h1>
+        <p class="auth-sub">Get started with AI Image & Video Generation</p>
+      </div>
+
+      <div id="auth-alert" class="auth-alert"></div>
+
+      <form id="register-form">
+        <div class="studio-form-group">
+          <label class="studio-label" for="reg-name"><i data-lucide="user"></i> Full Name</label>
+          <input type="text" id="reg-name" class="studio-input" placeholder="Alex Morgan" required autocomplete="name">
+        </div>
+
+        <div class="studio-form-group">
+          <label class="studio-label" for="reg-email"><i data-lucide="mail"></i> Email Address</label>
+          <input type="email" id="reg-email" class="studio-input" placeholder="you@domain.com" required autocomplete="email">
+        </div>
+
+        <div class="studio-form-group">
+          <label class="studio-label" for="reg-password"><i data-lucide="lock"></i> Password</label>
+          <input type="password" id="reg-password" class="studio-input" placeholder="At least 6 characters" required autocomplete="new-password">
+        </div>
+
+        <div class="studio-form-group">
+          <label class="studio-label" for="reg-confirm"><i data-lucide="shield-check"></i> Confirm Password</label>
+          <input type="password" id="reg-confirm" class="studio-input" placeholder="Re-enter password" required autocomplete="new-password">
+        </div>
+
+        <button type="submit" class="btn-primary-studio" id="btn-submit-reg" style="max-width: 100%; margin-top: 0.5rem;">
+          <i data-lucide="user-plus"></i>
+          <span id="btn-text">Create Account</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Already registered? <a href="/login">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Redirect if already logged in
+    AIStudioAuth.redirectIfAuthenticated("/dashboard");
+
+    const form = document.getElementById("register-form");
+    const alertBox = document.getElementById("auth-alert");
+    const submitBtn = document.getElementById("btn-submit-reg");
+    const btnText = document.getElementById("btn-text");
+
+    function showAlert(msg, isError = true) {
+      alertBox.textContent = msg;
+      alertBox.className = "auth-alert " + (isError ? "error" : "success");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("reg-name").value.trim();
+      const email = document.getElementById("reg-email").value.trim();
+      const password = document.getElementById("reg-password").value;
+      const confirm = document.getElementById("reg-confirm").value;
+
+      if (!name || !email || !password) {
+        showAlert("Please fill in all required fields.");
+        return;
+      }
+
+      if (password.length < 6) {
+        showAlert("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (password !== confirm) {
+        showAlert("Passwords do not match. Please re-enter.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnText.textContent = "Creating Account...";
+
+      try {
+        await AIStudioAuth.register(name, email, password);
+        showAlert("Account created successfully! Redirecting to studio...", false);
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 1000);
+      } catch (err) {
+        console.error("Registration error:", err);
+        let msg = err.message || "Failed to create account.";
+        if (err.code === "auth/email-already-in-use") {
+          msg = "An account with this email already exists. Please sign in.";
+        } else if (err.code === "auth/weak-password") {
+          msg = "Password is too weak. Please use a stronger combination.";
+        }
+        showAlert(msg, true);
+        submitBtn.disabled = false;
+        btnText.textContent = "Create Account";
+      }
+    });
+  </script>
+</body>
+</html>

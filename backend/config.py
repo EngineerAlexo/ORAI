@@ -37,12 +37,30 @@ class Config:
     # Pollinations API Key (Priority & Turbo)
     POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "").strip()
 
+    # Firebase Settings
+    FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "save-data-19a24").strip()
+    FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "AIzaSyDG_QswQHzv8d4kpmPF2gYNimhgZhTLz1Q").strip()
+    FIREBASE_AUTH_DOMAIN = os.getenv("FIREBASE_AUTH_DOMAIN", "save-data-19a24.firebaseapp.com").strip()
+    FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "save-data-19a24.firebasestorage.app").strip()
+    FIREBASE_MESSAGING_SENDER_ID = os.getenv("FIREBASE_MESSAGING_SENDER_ID", "240569425778").strip()
+    FIREBASE_APP_ID = os.getenv("FIREBASE_APP_ID", "1:240569425778:web:fe8e24f82f29dbce9c07eb").strip()
+    FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "").strip()
+
+    # User Quotas
+    DAILY_IMAGE_LIMIT = int(os.getenv("DAILY_IMAGE_LIMIT", 25))
+    DAILY_VIDEO_LIMIT = int(os.getenv("DAILY_VIDEO_LIMIT", 10))
+
+    # Media Storage directories
+    UPLOAD_DIR = BASE_DIR / "backend" / "uploads"
+    MEDIA_IMAGES_DIR = UPLOAD_DIR / "images"
+    MEDIA_VIDEOS_DIR = UPLOAD_DIR / "videos"
+
     # Flask settings
     PORT = int(os.getenv("PORT", 5000))
     DEBUG = os.getenv("FLASK_DEBUG", "True").lower() in ("true", "1", "yes")
 
     # Image generation defaults
-    DEFAULT_STEPS = int(os.getenv("DEFAULT_STEPS", 4))
+    DEFAULT_STEPS = int(os.getenv("DEFAULT_STEPS", 8))
     MAX_PROMPT_LENGTH = 2000
 
     @classmethod

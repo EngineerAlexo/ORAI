@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/studio-nav.js"></script>
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- Sidebar -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-header">
+        <div class="studio-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-label">Core Studio</span>
+        <a href="/dashboard" class="nav-item active"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="/image-generator" class="nav-item"><i data-lucide="image"></i> Image Studio <span class="nav-badge">FLUX.1</span></a>
+        <a href="/video-generator" class="nav-item"><i data-lucide="video"></i> Video Studio <span class="nav-badge" style="background: rgba(236,72,153,0.3); color:#f472b6;">T2V / I2V</span></a>
+
+        <span class="nav-label">My Workspace</span>
+        <a href="/gallery" class="nav-item"><i data-lucide="folder-heart"></i> My Gallery</a>
+        <a href="/account" class="nav-item"><i data-lucide="user"></i> My Account</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-snippet">
+          <div class="user-avatar" id="sidebar-user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">Loading...</div>
+            <div class="user-email" id="sidebar-user-email">...</div>
+          </div>
+        </div>
+        <button type="button" class="btn-sidebar-logout" id="btn-sidebar-logout"><i data-lucide="log-out"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="studio-main">
+      <header class="studio-topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle"><i data-lucide="menu"></i></button>
+          <div class="topbar-title-wrap">
+            <h2>Studio Dashboard</h2>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Light/Dark Theme"><i data-lucide="sun"></i></button>
+        </div>
+      </header>
+
+      <div class="studio-content">
+        <!-- Hero Welcome -->
+        <div class="studio-card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%); border-color: rgba(139, 92, 246, 0.3);">
+          <div style="max-width: 650px;">
+            <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.5rem;">
+              Welcome to <span style="background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AI Studio</span>
+            </h1>
+            <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+              Create breathtaking 8K visuals and synthesize cinematic videos using state-of-the-art AI diffusion engines.
+            </p>
+            <div style="display: flex; gap: 0.85rem; flex-wrap: wrap;">
+              <a href="/image-generator" class="btn-primary-studio" style="width: auto; padding: 0.75rem 1.5rem; font-size: 0.92rem;">
+                <i data-lucide="image"></i> Generate Image
+              </a>
+              <a href="/video-generator" class="btn-primary-studio" style="width: auto; padding: 0.75rem 1.5rem; font-size: 0.92rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+                <i data-lucide="video"></i> Generate Video
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Metrics Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+          <div class="studio-card" style="margin-bottom: 0; padding: 1.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Total Images</span>
+              <div style="color: var(--primary-violet);"><i data-lucide="image"></i></div>
+            </div>
+            <div style="font-size: 1.8rem; font-weight: 800;" id="metric-total-images">0</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Generated across all styles</div>
+          </div>
+
+          <div class="studio-card" style="margin-bottom: 0; padding: 1.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Total Videos</span>
+              <div style="color: var(--accent-pink);"><i data-lucide="video"></i></div>
+            </div>
+            <div style="font-size: 1.8rem; font-weight: 800;" id="metric-total-videos">0</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Text-to-Video & Image-to-Video</div>
+          </div>
+
+          <div class="studio-card" style="margin-bottom: 0; padding: 1.35rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase;">Image Engines</span>
+              <div style="color: var(--success);"><i data-lucide="cpu"></i></div>
+            </div>
+            <div style="font-size: 1.8rem; font-weight: 800;">3 Active</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.2rem;">Cloudflare (5x) • Gemini • Pollinations</div>
+          </div>
+        </div>
+
+        <!-- Recent Creations Preview -->
+        <div class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Recent Creations</h3>
+              <p>Your latest synthesized images and videos</p>
+            </div>
+            <a href="/gallery" style="color: var(--primary-violet); font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+              View All <i data-lucide="arrow-right" style="width: 15px; height: 15px;"></i>
+            </a>
+          </div>
+
+          <div id="dashboard-recent-grid" class="gallery-grid" style="grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));">
+            <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+              <i data-lucide="sparkles" style="width: 36px; height: 36px; opacity: 0.4; margin-bottom: 0.5rem;"></i>
+              <p>Loading your recent creations...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // Fetch user gallery items and metrics
+    async function loadDashboardData() {
+      try {
+        const statsRes = await AIStudioAuth.authFetch("/api/user/stats");
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          const s = statsData.stats || {};
+          document.getElementById("metric-total-images").textContent = s.total_images || 0;
+          document.getElementById("metric-total-videos").textContent = s.total_videos || 0;
+        }
+
+        const galRes = await AIStudioAuth.authFetch("/api/gallery");
+        if (galRes.ok) {
+          const galData = await galRes.json();
+          const items = (galData.gallery || []).slice(0, 4);
+          const grid = document.getElementById("dashboard-recent-grid");
+
+          if (!items.length) {
+            grid.innerHTML = `
+              <div style="grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                <i data-lucide="image" style="width: 32px; height: 32px; opacity: 0.4; margin-bottom: 0.5rem;"></i>
+                <p>No creations yet. Generate your first artwork in the Image or Video Studio!</p>
+              </div>`;
+            lucide.createIcons();
+            return;
+          }
+
+          grid.innerHTML = items.map(item => `
+            <div class="gallery-card">
+              <div class="gallery-media-thumb">
+                ${item.type === 'video' 
+                  ? `<video src="${item.url}" muted playsinline></video>`
+                  : `<img src="${item.url}" alt="Creation" loading="lazy">`
+                }
+              </div>
+              <div class="gallery-card-body">
+                <div class="gallery-card-prompt">${item.prompt}</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.74rem; color: var(--text-dim);">
+                  <span>${item.type.toUpperCase()}</span>
+                  <span>${item.aspect_ratio || '1:1'}</span>
+                </div>
+              </div>
+            </div>
+          `).join("");
+          lucide.createIcons();
+        }
+      } catch (err) {
+        console.warn("Dashboard data load error:", err);
+      }
+    }
+
+    AIStudioAuth.onStateChange((u) => {
+      if (u) loadDashboardData();
+    });
+  </script>
+</body>
+</html>

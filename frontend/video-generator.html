@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Video Studio - AI Studio</title>
+  <link rel="stylesheet" href="/css/studio.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="/js/firebase-config.js"></script>
+  <script src="/js/studio-nav.js"></script>
+</head>
+<body>
+  <div class="studio-layout">
+    <!-- Sidebar -->
+    <aside class="studio-sidebar">
+      <div class="sidebar-header">
+        <div class="studio-logo">
+          <div class="logo-icon-box"><i data-lucide="sparkles"></i></div>
+          <span>AI Studio</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-label">Core Studio</span>
+        <a href="/dashboard" class="nav-item"><i data-lucide="layout-dashboard"></i> Dashboard</a>
+        <a href="/image-generator" class="nav-item"><i data-lucide="image"></i> Image Studio <span class="nav-badge">FLUX.1</span></a>
+        <a href="/video-generator" class="nav-item active"><i data-lucide="video"></i> Video Studio <span class="nav-badge" style="background: rgba(236,72,153,0.3); color:#f472b6;">T2V / I2V</span></a>
+
+        <span class="nav-label">My Workspace</span>
+        <a href="/gallery" class="nav-item"><i data-lucide="folder-heart"></i> My Gallery</a>
+        <a href="/account" class="nav-item"><i data-lucide="user"></i> My Account</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-snippet">
+          <div class="user-avatar" id="sidebar-user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-user-name">Creator</div>
+            <div class="user-email" id="sidebar-user-email">...</div>
+          </div>
+        </div>
+        <button type="button" class="btn-sidebar-logout" id="btn-sidebar-logout"><i data-lucide="log-out"></i> Log Out</button>
+      </div>
+    </aside>
+
+    <!-- Main View -->
+    <main class="studio-main">
+      <header class="studio-topbar">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <button class="mobile-nav-toggle" id="mobile-nav-toggle"><i data-lucide="menu"></i></button>
+          <div class="topbar-title-wrap">
+            <h2>AI Video Studio</h2>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
+        </div>
+      </header>
+
+      <div class="studio-content">
+        <!-- Video Controls Card -->
+        <section class="studio-card">
+          <div class="card-header-clean">
+            <div class="card-title-group">
+              <h3>Synthesize AI Video</h3>
+              <p>Generate high-definition cinematic video clips from text or animate still images</p>
+            </div>
+
+            <!-- Mode Selector Tabs -->
+            <div class="mode-tabs">
+              <button type="button" class="mode-tab active" id="tab-t2v" data-mode="text-to-video">
+                <i data-lucide="type"></i> Text-to-Video
+              </button>
+              <button type="button" class="mode-tab" id="tab-i2v" data-mode="image-to-video">
+                <i data-lucide="image-plus"></i> Image-to-Video
+              </button>
+            </div>
+          </div>
+
+          <!-- Image Upload Area (Shown only in Image-to-Video mode) -->
+          <div id="i2v-upload-container" class="hidden" style="margin-bottom: 1.5rem;">
+            <label class="studio-label"><i data-lucide="upload"></i> Upload Source Image</label>
+            <div class="image-upload-dropzone" id="dropzone">
+              <input type="file" id="image-file-input" accept="image/png, image/jpeg, image/webp" style="display: none;">
+              <i data-lucide="image" class="dropzone-icon"></i>
+              <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.35rem;">Click or drag an image to animate</h4>
+              <p style="font-size: 0.8rem; color: var(--text-dim);">PNG, JPG, WebP up to 10MB</p>
+            </div>
+
+            <!-- Uploaded Preview -->
+            <div id="uploaded-preview-wrap" class="hidden" style="margin-top: 1rem; display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <img id="uploaded-thumb" src="" alt="Source preview" style="width: 70px; height: 70px; object-fit: cover; border-radius: var(--radius-sm);">
+              <div style="flex: 1; overflow: hidden;">
+                <div id="uploaded-filename" style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                <div id="uploaded-filesize" style="font-size: 0.75rem; color: var(--text-dim);"></div>
+              </div>
+              <button type="button" id="btn-remove-image" style="color: #ef4444; padding: 0.4rem;"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+
+          <!-- Video Prompt -->
+          <div class="studio-form-group">
+            <label class="studio-label" for="video-prompt" id="prompt-label"><i data-lucide="pen-tool"></i> Scene Description</label>
+            <textarea id="video-prompt" class="studio-textarea" placeholder="Describe motion, camera movement, and visual action (e.g. A spotted hyena sitting in the African savanna, eating food, looking toward the camera, cinematic wildlife documentary, 4k 60fps)"></textarea>
+          </div>
+
+          <!-- Video Settings (Aspect Ratio & Duration) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem;">
+            <div class="studio-form-group" style="margin-bottom: 0;">
+              <label class="studio-label"><i data-lucide="proportions"></i> Aspect Ratio</label>
+              <select id="video-aspect-ratio" class="studio-select">
+                <option value="16:9" selected>16:9 Widescreen (Landscape)</option>
+                <option value="9:16">9:16 Vertical (Reels / TikTok)</option>
+                <option value="1:1">1:1 Square</option>
+              </select>
+            </div>
+
+            <div class="studio-form-group" style="margin-bottom: 0;">
+              <label class="studio-label"><i data-lucide="clock"></i> Duration</label>
+              <select id="video-duration" class="studio-select">
+                <option value="4" selected>4 Seconds (Standard)</option>
+                <option value="6">6 Seconds (Extended)</option>
+                <option value="8">8 Seconds (Long)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Generate Action -->
+          <div style="display: flex; justify-content: center; margin-top: 1rem;">
+            <button type="button" class="btn-primary-studio" id="btn-generate-video" style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+              <i data-lucide="video"></i>
+              <span id="btn-video-text">Generate Video</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Video Results Section -->
+        <section id="video-result-container" class="hidden" style="margin-bottom: 2.5rem;">
+          <!-- Asynchronous Progress Card -->
+          <div id="video-loading-card" class="studio-card hidden" style="text-align: center; padding: 3rem 1.5rem;">
+            <div class="orb-pulsar" style="margin: 0 auto 1.5rem;">
+              <div class="pulsar-wave" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"></div>
+              <div class="pulsar-center" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"><i data-lucide="film" class="loading-icon"></i></div>
+            </div>
+            <h3 id="video-loading-status" style="font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem;">Initializing Video Synthesis Engine...</h3>
+            <p id="video-loading-sub" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">Video generation executes on GPU clusters and may take 30–60 seconds</p>
+            
+            <!-- Progress Bar -->
+            <div style="max-width: 400px; height: 8px; background: rgba(255,255,255,0.08); border-radius: var(--radius-full); margin: 0 auto 1rem; overflow: hidden;">
+              <div id="video-progress-bar" style="width: 15%; height: 100%; background: linear-gradient(90deg, #ec4899, #8b5cf6); border-radius: var(--radius-full); transition: width 0.4s ease;"></div>
+            </div>
+            <div id="video-timer" class="generation-timer">Elapsed: 0.0s</div>
+          </div>
+
+          <!-- Video Player Showcase -->
+          <div id="video-output-card" class="studio-card hidden" style="display: flex; flex-direction: column; align-items: center; gap: 1.5rem;">
+            <div class="video-preview-wrapper">
+              <video id="output-video-player" class="video-player" controls playsinline loop autoplay muted></video>
+            </div>
+
+            <!-- Video Details & Actions -->
+            <div style="width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <span class="meta-tag" id="meta-video-mode" style="background: rgba(236,72,153,0.15); color: #f472b6; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">Text-to-Video</span>
+                <span class="meta-tag" id="meta-video-ratio" style="background: rgba(6,182,212,0.15); color: #67e8f9; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">16:9</span>
+                <span class="meta-tag" id="meta-video-provider" style="background: rgba(16,185,129,0.15); color: #6ee7b7; padding: 0.35rem 0.75rem; border-radius: var(--radius-full); font-size: 0.8rem; font-weight: 700;">AI Video Engine</span>
+              </div>
+
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a id="btn-download-video" href="#" download="ai-video.mp4" class="btn-primary-studio" style="width: auto; padding: 0.75rem 1.75rem; font-size: 0.92rem; background: linear-gradient(135deg, #ec4899, #8b5cf6);">
+                  <i data-lucide="download"></i> Download MP4
+                </a>
+                <a href="/gallery?type=video" class="action-chip" style="padding: 0.75rem 1.25rem; font-size: 0.92rem;">
+                  <i data-lucide="folder-heart"></i> View in Gallery
+                </a>
+              </div>
+
+              <div class="output-prompt-box">
+                <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.25rem;">Prompt</div>
+                <div id="video-prompt-display" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Error Card -->
+          <div id="video-error-card" class="studio-card error-card hidden">
+            <i data-lucide="alert-triangle" style="width: 38px; height: 38px; color: #ef4444; margin-bottom: 0.75rem;"></i>
+            <h4 style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">Video Generation Notice</h4>
+            <p id="video-error-msg" style="color: #fca5a5; font-size: 0.9rem; max-width: 580px; margin-bottom: 1rem; line-height: 1.5;"></p>
+            <div style="display: flex; gap: 0.75rem;">
+              <a href="/account" class="action-chip" style="color: var(--primary-violet); border-color: var(--primary-violet);"><i data-lucide="key"></i> Configure API Provider</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let currentMode = "text-to-video";
+    let uploadedImageBase64 = null;
+    let pollInterval = null;
+    let timerInterval = null;
+
+    // Mode tabs toggle
+    const tabT2V = document.getElementById("tab-t2v");
+    const tabI2V = document.getElementById("tab-i2v");
+    const uploadContainer = document.getElementById("i2v-upload-container");
+    const promptLabel = document.getElementById("prompt-label");
+
+    tabT2V.addEventListener("click", () => {
+      tabT2V.classList.add("active");
+      tabI2V.classList.remove("active");
+      currentMode = "text-to-video";
+      uploadContainer.classList.add("hidden");
+      promptLabel.innerHTML = '<i data-lucide="pen-tool"></i> Scene Description';
+      lucide.createIcons();
+    });
+
+    tabI2V.addEventListener("click", () => {
+      tabI2V.classList.add("active");
+      tabT2V.classList.remove("active");
+      currentMode = "image-to-video";
+      uploadContainer.classList.remove("hidden");
+      promptLabel.innerHTML = '<i data-lucide="move"></i> Animation & Motion Description';
+      lucide.createIcons();
+    });
+
+    // File Dropzone handlers
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("image-file-input");
+    const previewWrap = document.getElementById("uploaded-preview-wrap");
+    const thumbImg = document.getElementById("uploaded-thumb");
+    const fnEl = document.getElementById("uploaded-filename");
+    const fsEl = document.getElementById("uploaded-filesize");
+    const removeBtn = document.getElementById("btn-remove-image");
+
+    dropzone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) handleFileSelected(file);
+    });
+
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "var(--primary-violet)";
+    });
+
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.style.borderColor = "var(--border-subtle)";
+    });
+
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.style.borderColor = "var(--border-subtle)";
+      if (e.dataTransfer.files.length) {
+        handleFileSelected(e.dataTransfer.files[0]);
+      }
+    });
+
+    function handleFileSelected(file) {
+      if (!file.type.startsWith("image/")) {
+        alert("Please upload a valid image file (JPG, PNG, WebP).");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Image exceeds maximum size of 10MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedImageBase64 = e.target.result;
+        thumbImg.src = uploadedImageBase64;
+        fnEl.textContent = file.name;
+        fsEl.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        previewWrap.classList.remove("hidden");
+        dropzone.classList.add("hidden");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    removeBtn.addEventListener("click", () => {
+      uploadedImageBase64 = null;
+      fileInput.value = "";
+      previewWrap.classList.add("hidden");
+      dropzone.classList.remove("hidden");
+    });
+
+    // Generate Action
+    document.getElementById("btn-generate-video").addEventListener("click", handleVideoGenerate);
+
+    async function handleVideoGenerate() {
+      const prompt = document.getElementById("video-prompt").value.trim();
+      const ratio = document.getElementById("video-aspect-ratio").value;
+      const duration = document.getElementById("video-duration").value;
+
+      if (!prompt) {
+        alert("Please describe the video or animation you want to generate.");
+        document.getElementById("video-prompt").focus();
+        return;
+      }
+
+      if (currentMode === "image-to-video" && !uploadedImageBase64) {
+        alert("Please upload a source image for Image-to-Video generation.");
+        return;
+      }
+
+      const resContainer = document.getElementById("video-result-container");
+      const loadingCard = document.getElementById("video-loading-card");
+      const outputCard = document.getElementById("video-output-card");
+      const errorCard = document.getElementById("video-error-card");
+      const progressBar = document.getElementById("video-progress-bar");
+      const statusText = document.getElementById("video-loading-status");
+      const genBtn = document.getElementById("btn-generate-video");
+      const btnText = document.getElementById("btn-video-text");
+
+      resContainer.classList.remove("hidden");
+      loadingCard.classList.remove("hidden");
+      outputCard.classList.add("hidden");
+      errorCard.classList.add("hidden");
+      genBtn.disabled = true;
+      btnText.textContent = "Synthesizing Video...";
+
+      resContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Elapsed timer
+      let startTime = Date.now();
+      const timerEl = document.getElementById("video-timer");
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const sec = ((Date.now() - startTime) / 1000).toFixed(1);
+        timerEl.textContent = `Elapsed: ${sec}s`;
+      }, 100);
+
+      try {
+        const response = await AIStudioAuth.authFetch("/api/video/generate", {
+          method: "POST",
+          body: JSON.stringify({
+            mode: currentMode,
+            prompt: prompt,
+            aspect_ratio: ratio,
+            duration: parseInt(duration),
+            image_data: uploadedImageBase64,
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to initialize video generation task.");
+        }
+
+        const jobId = data.job_id;
+        progressBar.style.width = "25%";
+        statusText.textContent = "Job queued. Scheduling GPU compute...";
+
+        // Start polling job status
+        pollVideoStatus(jobId, prompt, ratio);
+
+      } catch (err) {
+        clearInterval(timerInterval);
+        loadingCard.classList.add("hidden");
+        errorCard.classList.remove("hidden");
+        document.getElementById("video-error-msg").textContent = err.message;
+        genBtn.disabled = false;
+        btnText.textContent = "Generate Video";
+        lucide.createIcons();
+      }
+    }
+
+    function pollVideoStatus(jobId, prompt, ratio) {
+      const loadingCard = document.getElementById("video-loading-card");
+      const outputCard = document.getElementById("video-output-card");
+      const errorCard = document.getElementById("video-error-card");
+      const progressBar = document.getElementById("video-progress-bar");
+      const statusText = document.getElementById("video-loading-status");
+      const genBtn = document.getElementById("btn-generate-video");
+      const btnText = document.getElementById("btn-video-text");
+
+      if (pollInterval) clearInterval(pollInterval);
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await AIStudioAuth.authFetch(`/api/video/status/${jobId}`);
+          if (!res.ok) return;
+
+          const data = await res.json();
+          const job = data.job || {};
+
+          if (job.progress) {
+            progressBar.style.width = `${job.progress}%`;
+          }
+          if (job.message) {
+            statusText.textContent = job.message;
+          }
+
+          if (job.status === "completed") {
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+
+            loadingCard.classList.add("hidden");
+            outputCard.classList.remove("hidden");
+
+            const player = document.getElementById("output-video-player");
+            player.src = job.video_url;
+
+            document.getElementById("btn-download-video").href = job.video_url;
+            document.getElementById("meta-video-mode").textContent = currentMode === "text-to-video" ? "Text-to-Video" : "Image-to-Video";
+            document.getElementById("meta-video-ratio").textContent = ratio;
+            document.getElementById("meta-video-provider").textContent = job.provider || "AI Video Engine";
+            document.getElementById("video-prompt-display").textContent = prompt;
+
+            genBtn.disabled = false;
+            btnText.textContent = "Generate Video";
+            if (window.refreshQuotas) window.refreshQuotas();
+            lucide.createIcons();
+
+          } else if (job.status === "failed") {
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+
+            loadingCard.classList.add("hidden");
+            errorCard.classList.remove("hidden");
+            document.getElementById("video-error-msg").textContent = job.error || "Video synthesis failed.";
+            genBtn.disabled = false;
+            btnText.textContent = "Generate Video";
+            lucide.createIcons();
+          }
+        } catch (e) {
+          console.warn("Polling error:", e);
+        }
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

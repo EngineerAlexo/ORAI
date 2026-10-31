@@ -163,7 +163,7 @@ class VideoGenerator:
         # 1. Hugging Face ZeroGPU (Priority 1 - Free ZeroGPU Inference)
         if providers["huggingface"]:
             self._update_job(job_id, progress=25, message="Synthesizing video with Hugging Face ZeroGPU (LTX-Video)...")
-            success, res = self._generate_hf_video(prompt, mode, image_data)
+            success, res = self._generate_hf_video(prompt, mode, image_data, duration, aspect_ratio)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
                 return
@@ -323,7 +323,14 @@ class VideoGenerator:
 
         return False, {"error": "Replicate: Video generation timed out"}
 
-    def _generate_hf_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
+    def _generate_hf_video(
+        self,
+        prompt: str,
+        mode: str,
+        image_data: Optional[str],
+        duration: int = 4,
+        aspect_ratio: str = "16:9",
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Call free Hugging Face ZeroGPU space using gradio_client."""
         try:
             from gradio_client import Client, handle_file
@@ -335,6 +342,21 @@ class VideoGenerator:
             ("Lightricks/ltx-video-distilled", "Lightricks LTX-Video [Free ZeroGPU]"),
             ("DeepRat/LTX-Video-ZeroGPU-Optimized", "LTX-Video ZeroGPU Optimized"),
         ]
+
+        # Map aspect ratio to dimensions (multiples of 32 for LTX-Video pipeline)
+        if aspect_ratio == "9:16":
+            width_ui, height_ui = 512, 704
+        elif aspect_ratio == "1:1":
+            width_ui, height_ui = 512, 512
+        else:
+            width_ui, height_ui = 704, 512
+
+        # Map target duration (supported range: 0.3s to 8.5s)
+        try:
+            target_dur = float(duration) if duration else 4.0
+        except (ValueError, TypeError):
+            target_dur = 4.0
+        target_dur = max(1.0, min(8.0, target_dur))
 
         temp_img_file = None
         if (mode == "image-to-video" or image_data) and image_data:
@@ -352,7 +374,7 @@ class VideoGenerator:
 
         for space_name, model_label in spaces:
             try:
-                logger.info("Attempting Hugging Face ZeroGPU Space: %s...", space_name)
+                logger.info("Attempting Hugging Face ZeroGPU Space: %s (duration=%ss, size=%sx%s)...", space_name, target_dur, width_ui, height_ui)
                 client = Client(space_name, token=token)
 
                 if temp_img_file and temp_img_file.exists():
@@ -362,10 +384,10 @@ class VideoGenerator:
                         negative_prompt="blurry, low quality, jittery, distorted",
                         input_image_filepath=handle_file(str(temp_img_file)),
                         input_video_filepath=None,
-                        height_ui=512,
-                        width_ui=704,
+                        height_ui=height_ui,
+                        width_ui=width_ui,
                         mode="image-to-video",
-                        duration_ui=2,
+                        duration_ui=target_dur,
                         ui_frames_to_use=9,
                         seed_ui=42,
                         randomize_seed=True,
@@ -380,10 +402,10 @@ class VideoGenerator:
                         negative_prompt="blurry, low quality, jittery, distorted",
                         input_image_filepath=None,
                         input_video_filepath=None,
-                        height_ui=512,
-                        width_ui=704,
+                        height_ui=height_ui,
+                        width_ui=width_ui,
                         mode="text-to-video",
-                        duration_ui=2,
+                        duration_ui=target_dur,
                         ui_frames_to_use=9,
                         seed_ui=42,
                         randomize_seed=True,

@@ -62,7 +62,10 @@ async function authFetch(url, options = {}) {
   });
 
   if (response.status === 401) {
-    console.warn("API returned 401 (unauthenticated). Continuing in guest mode.");
+    if (!window.location.pathname.includes("/login") && !window.location.pathname.includes("/register") && window.location.pathname !== "/") {
+      sessionStorage.setItem("auth_redirect", window.location.pathname);
+      window.location.href = "/register";
+    }
   }
 
   return response;

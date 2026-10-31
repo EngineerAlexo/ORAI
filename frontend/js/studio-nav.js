@@ -73,11 +73,11 @@
           };
         }
       } else {
-        if (nameEl) nameEl.textContent = "Guest Creator";
-        if (emailEl) emailEl.textContent = "Instant Mode (25 Free/day)";
-        if (avatarEl) avatarEl.textContent = "G";
+        if (nameEl) nameEl.textContent = "Please Sign In";
+        if (emailEl) emailEl.textContent = "Registration required";
+        if (avatarEl) avatarEl.textContent = "?";
         if (logoutBtn) {
-          logoutBtn.innerHTML = `<i data-lucide="log-in"></i> Sign In to Sync`;
+          logoutBtn.innerHTML = `<i data-lucide="log-in"></i> Sign In`;
           logoutBtn.onclick = () => {
             window.location.href = "/login";
           };

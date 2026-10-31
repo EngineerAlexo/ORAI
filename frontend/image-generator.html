@@ -58,8 +58,8 @@
         </div>
 
         <div class="topbar-actions">
-          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
-          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>5 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>1 Video Left</span></div>
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
         </div>
       </header>
@@ -236,6 +236,7 @@
 
   <script>
     lucide.createIcons();
+    AIStudioAuth.requireAuth("/register");
 
     // Surprise prompts
     const SURPRISE_PROMPTS = [

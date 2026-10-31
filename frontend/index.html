@@ -97,10 +97,6 @@
 
   <!-- Hero Section -->
   <section class="landing-hero">
-    <div class="landing-badge">
-      <i data-lucide="zap"></i> Powered by FLUX.1 Schnell & Advanced Video Engines
-    </div>
-    
     <h1 class="landing-title">
       Turn Imagination Into <br>
       <span style="background: var(--gradient-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
@@ -113,17 +109,17 @@
     </p>
 
     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-      <a href="/image-generator" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem;">
+      <a href="/register" id="btn-launch-image" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem;">
         <i data-lucide="image"></i> Launch Image Studio
       </a>
-      <a href="/video-generator" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+      <a href="/register" id="btn-launch-video" class="btn-primary-studio" style="width: auto; padding: 0.95rem 2rem; background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
         <i data-lucide="video"></i> Launch Video Studio
       </a>
     </div>
   </section>
 
   <!-- Features Grid -->
-  <section class="feature-card-grid">
+  <section class="feature-card-grid" style="max-width: 900px;">
     <div class="feature-card">
       <div class="feature-icon-box" style="background: linear-gradient(135deg, #8b5cf6, #6366f1);"><i data-lucide="image"></i></div>
       <h3 style="font-size: 1.25rem; font-weight: 800;">Next-Gen Image Studio</h3>
@@ -139,14 +135,6 @@
         Generate videos from text descriptions or upload images to animate camera movements and dynamic motion into full MP4 video files.
       </p>
     </div>
-
-    <div class="feature-card">
-      <div class="feature-icon-box" style="background: linear-gradient(135deg, #10b981, #06b6d4);"><i data-lucide="shield-check"></i></div>
-      <h3 style="font-size: 1.25rem; font-weight: 800;">Firebase Auth & Privacy</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
-        Secure user registration, cryptographic token verification on the backend, and private isolated galleries so only you can view your creations.
-      </p>
-    </div>
   </section>
 
   <!-- Footer -->
@@ -157,19 +145,30 @@
   <script>
     lucide.createIcons();
 
-    // Check if user is already logged in to customize topbar
+    // Check if user is already logged in to customize topbar & studio launch links
     AIStudioAuth.onStateChange(user => {
       const authActions = document.getElementById("landing-auth-actions");
+      const btnImage = document.getElementById("btn-launch-image");
+      const btnVideo = document.getElementById("btn-launch-video");
+
       if (user) {
-        authActions.innerHTML = `
-          <a href="/dashboard" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem; color: var(--primary-violet); border-color: var(--primary-violet);">
-            <i data-lucide="layout-dashboard"></i> Dashboard
-          </a>
-          <a href="/gallery" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem;">
-            <i data-lucide="folder-heart"></i> Gallery
-          </a>
-        `;
-        lucide.createIcons();
+        if (btnImage) btnImage.href = "/image-generator";
+        if (btnVideo) btnVideo.href = "/video-generator";
+
+        if (authActions) {
+          authActions.innerHTML = `
+            <a href="/dashboard" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem; color: var(--primary-violet); border-color: var(--primary-violet);">
+              <i data-lucide="layout-dashboard"></i> Dashboard
+            </a>
+            <a href="/gallery" class="action-chip" style="font-size: 0.88rem; padding: 0.5rem 1.15rem;">
+              <i data-lucide="folder-heart"></i> Gallery
+            </a>
+          `;
+          lucide.createIcons();
+        }
+      } else {
+        if (btnImage) btnImage.href = "/register";
+        if (btnVideo) btnVideo.href = "/register";
       }
     });
   </script>

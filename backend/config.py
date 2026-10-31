@@ -55,8 +55,8 @@ class Config:
     FIREBASE_CREDENTIALS_PATH = os.getenv("FIREBASE_CREDENTIALS_PATH", "").strip()
 
     # User Quotas
-    DAILY_IMAGE_LIMIT = int(os.getenv("DAILY_IMAGE_LIMIT", 25))
-    DAILY_VIDEO_LIMIT = int(os.getenv("DAILY_VIDEO_LIMIT", 10))
+    DAILY_IMAGE_LIMIT = int(os.getenv("DAILY_IMAGE_LIMIT", 5))
+    DAILY_VIDEO_LIMIT = int(os.getenv("DAILY_VIDEO_LIMIT", 1))
 
     # Media Storage directories
     UPLOAD_DIR = BASE_DIR / "backend" / "uploads"

@@ -57,8 +57,8 @@
         </div>
 
         <div class="topbar-actions">
-          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>25 Images Left</span></div>
-          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>10 Videos Left</span></div>
+          <div class="quota-chip" id="quota-images"><i data-lucide="image"></i> <span>5 Images Left</span></div>
+          <div class="quota-chip" id="quota-videos"><i data-lucide="video"></i> <span>1 Video Left</span></div>
           <button class="theme-toggle-btn" id="btn-theme-toggle" title="Toggle Theme"><i data-lucide="sun"></i></button>
         </div>
       </header>
@@ -190,13 +190,9 @@
           </div>
 
           <!-- Video Error Card -->
-          <div id="video-error-card" class="studio-card error-card hidden">
-            <i data-lucide="alert-triangle" style="width: 38px; height: 38px; color: #ef4444; margin-bottom: 0.75rem;"></i>
-            <h4 style="font-size: 1.15rem; font-weight: 700; color: #ffffff; margin-bottom: 0.5rem;">Video Generation Notice</h4>
-            <p id="video-error-msg" style="color: #fca5a5; font-size: 0.9rem; max-width: 580px; margin-bottom: 1rem; line-height: 1.5;"></p>
-            <div style="display: flex; gap: 0.75rem;">
-              <a href="/account" class="action-chip" style="color: var(--primary-violet); border-color: var(--primary-violet);"><i data-lucide="key"></i> Configure API Provider</a>
-            </div>
+          <div id="video-error-card" class="studio-card error-card hidden" style="padding: 1.5rem; text-align: center;">
+            <i data-lucide="alert-circle" style="width: 32px; height: 32px; color: #ef4444; margin-bottom: 0.5rem;"></i>
+            <p id="video-error-msg" style="color: #fca5a5; font-size: 0.92rem; max-width: 580px; margin: 0 auto; line-height: 1.5;"></p>
           </div>
         </section>
       </div>
@@ -205,6 +201,7 @@
 
   <script>
     lucide.createIcons();
+    AIStudioAuth.requireAuth("/register");
 
     let currentMode = "text-to-video";
     let uploadedImageBase64 = null;

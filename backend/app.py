@@ -103,6 +103,49 @@ def get_status():
     })
 
 
+@app.route("/api/diagnose", methods=["GET"])
+def diagnose_providers():
+    """Diagnostic endpoint to inspect live AI providers status and failures."""
+    report = {}
+
+    # 1. Cloudflare
+    accounts = Config.get_cloudflare_accounts()
+    cf_results = []
+    for i, (acc, tok) in enumerate(accounts):
+        s, r = image_generator.cf_client._call_cloudflare(acc, tok, "a golden sunset", 4, None)
+        cf_results.append({
+            "account": i + 1,
+            "prefix": acc[:6] if acc else "",
+            "success": s,
+            "code": r.get("code"),
+            "error": r.get("error"),
+        })
+    report["cloudflare"] = cf_results
+
+    # 2. Pollinations
+    s_pol, r_pol = image_generator.cf_client._call_pollinations("a golden sunset", "1:1", None)
+    report["pollinations"] = {
+        "success": s_pol,
+        "code": r_pol.get("code"),
+        "error": r_pol.get("error"),
+    }
+
+    # 3. Gemini
+    gemini_keys = Config.get_gemini_keys()
+    gem_results = []
+    for i, k in enumerate(gemini_keys):
+        s_g, r_g = image_generator.cf_client._call_gemini(k, "a golden sunset", "1:1")
+        gem_results.append({
+            "key": i + 1,
+            "success": s_g,
+            "code": r_g.get("code"),
+            "error": r_g.get("error"),
+        })
+    report["gemini"] = gem_results
+
+    return jsonify(report)
+
+
 @app.route("/api/auth/verify", methods=["POST"])
 @require_auth
 def verify_auth():

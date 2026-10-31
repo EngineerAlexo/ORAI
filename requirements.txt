@@ -4,3 +4,4 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 pillow>=10.0.0
 firebase-admin>=7.0.0
+gradio_client>=1.0.0

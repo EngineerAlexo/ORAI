@@ -221,9 +221,8 @@ class StudioImageGenerator:
                         "model": self.cf_client.model,
                     }
 
-                if result.get("code") in ("RATE_LIMIT_EXCEEDED", "INVALID_TOKEN", "NOT_FOUND"):
-                    logger.warning("Cloudflare #%d limited (%s). Trying next...", acc_idx + 1, result.get("code"))
-                    continue
+                logger.warning("Cloudflare Account #%d unavailable (%s: %s). Trying next account...", acc_idx + 1, result.get("code"), result.get("error"))
+                continue
 
         # =============================================================
         # 2. Google Gemini Image API (Fallback)

@@ -245,14 +245,9 @@ class CloudflareAIClient:
         headers = {
             "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json",
-            "User-Agent": "ORAI-Studio/2.0",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         }
         payload = {"prompt": enhanced_prompt, "steps": steps}
-        if seed is not None:
-            try:
-                payload["seed"] = int(seed)
-            except Exception:
-                pass
 
         try:
             res = requests.post(url, headers=headers, json=payload, timeout=85)

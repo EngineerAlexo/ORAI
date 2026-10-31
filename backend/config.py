@@ -22,6 +22,9 @@ else:
 class Config:
     """App configuration with multi-account failover pool."""
 
+    ENV_PATH = ENV_PATH
+    BACKEND_ENV_PATH = BACKEND_ENV_PATH
+
     CLOUDFLARE_MODEL = os.getenv(
         "CLOUDFLARE_MODEL", "@cf/black-forest-labs/flux-1-schnell"
     ).strip()
@@ -36,6 +39,11 @@ class Config:
 
     # Pollinations API Key (Priority & Turbo)
     POLLINATIONS_API_KEY = os.getenv("POLLINATIONS_API_KEY", "").strip()
+
+    # Video Providers
+    REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN", "").strip()
+    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "").strip() or os.getenv("HF_TOKEN", "").strip()
+    MODELSLAB_API_KEY = os.getenv("MODELSLAB_API_KEY", "").strip()
 
     # Firebase Settings
     FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "save-data-19a24").strip()

@@ -27,28 +27,54 @@ _JOBS_LOCK = threading.Lock()
 class VideoGenerator:
     """Manages asynchronous video generation tasks and multi-provider dispatch."""
 
-    def __init__(self):
-        self.pollinations_key = Config.POLLINATIONS_API_KEY
-        self.hf_token = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HF_TOKEN", "")
-        self.replicate_token = os.getenv("REPLICATE_API_TOKEN", "")
-        self.runware_key = os.getenv("RUNWARE_API_KEY", "")
-        self.modelslab_key = os.getenv("MODELSLAB_API_KEY", "")
+    def _refresh_env(self):
+        """Dynamically reload environment variables so newly added keys in .env are picked up immediately."""
+        from dotenv import load_dotenv
+        if Config.ENV_PATH.exists():
+            load_dotenv(dotenv_path=Config.ENV_PATH, override=True)
+        if Config.BACKEND_ENV_PATH.exists():
+            load_dotenv(dotenv_path=Config.BACKEND_ENV_PATH, override=True)
+
+    @property
+    def pollinations_key(self) -> str:
+        self._refresh_env()
+        return os.getenv("POLLINATIONS_API_KEY", "").strip() or Config.POLLINATIONS_API_KEY
+
+    @property
+    def replicate_token(self) -> str:
+        self._refresh_env()
+        return os.getenv("REPLICATE_API_TOKEN", "").strip() or Config.REPLICATE_API_TOKEN
+
+    @property
+    def hf_token(self) -> str:
+        self._refresh_env()
+        return os.getenv("HUGGINGFACE_API_KEY", "").strip() or os.getenv("HF_TOKEN", "").strip() or Config.HUGGINGFACE_API_KEY
+
+    @property
+    def modelslab_key(self) -> str:
+        self._refresh_env()
+        return os.getenv("MODELSLAB_API_KEY", "").strip() or Config.MODELSLAB_API_KEY
+
+    @property
+    def runware_key(self) -> str:
+        self._refresh_env()
+        return os.getenv("RUNWARE_API_KEY", "").strip()
 
     def get_available_providers(self) -> Dict[str, Any]:
         """Check which video generation backends are configured."""
+        pol = bool(self.pollinations_key)
+        rep = bool(self.replicate_token)
+        hf = bool(self.hf_token)
+        rw = bool(self.runware_key)
+        ml = bool(self.modelslab_key)
+
         return {
-            "pollinations": bool(self.pollinations_key),
-            "huggingface": bool(self.hf_token),
-            "replicate": bool(self.replicate_token),
-            "runware": bool(self.runware_key),
-            "modelslab": bool(self.modelslab_key),
-            "any_available": bool(
-                self.pollinations_key
-                or self.hf_token
-                or self.replicate_token
-                or self.runware_key
-                or self.modelslab_key
-            ),
+            "pollinations": pol,
+            "replicate": rep,
+            "huggingface": hf,
+            "runware": rw,
+            "modelslab": ml,
+            "any_available": bool(pol or rep or hf or rw or ml),
         }
 
     def create_video_job(
@@ -136,19 +162,31 @@ class VideoGenerator:
 
         # Try Pollinations Video if key is configured
         if providers["pollinations"]:
-            self._update_job(job_id, progress=30, message="Synthesizing video with Pollinations AI...")
+            self._update_job(job_id, progress=25, message="Synthesizing with Pollinations AI...")
             success, res = self._generate_pollinations_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
                 return
             elif res.get("insufficient_balance"):
                 provider_notes.append("Pollinations: Account has 0.00 pollen balance (~0.60 pollen required per video). Top up at https://enter.pollinations.ai")
+                self._update_job(job_id, progress=45, message="Pollinations balance is 0.00. Switching automatically to Replicate AI...")
             elif res.get("error"):
                 provider_notes.append(f"Pollinations: {res.get('error')}")
 
+        # Try Replicate Video API if token is present
+        if providers["replicate"]:
+            self._update_job(job_id, progress=60, message="Synthesizing video with Replicate AI...")
+            success, res = self._generate_replicate_video(prompt, mode, image_data)
+            if success:
+                self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
+                return
+            elif res.get("error"):
+                provider_notes.append(res.get("error"))
+                self._update_job(job_id, progress=75, message="Replicate unavailable. Checking secondary engines...")
+
         # Try Hugging Face Router API if token is present
         if providers["huggingface"]:
-            self._update_job(job_id, progress=45, message="Synthesizing video frames on Hugging Face...")
+            self._update_job(job_id, progress=80, message="Attempting Hugging Face Inference...")
             success, res = self._generate_hf_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
@@ -156,19 +194,9 @@ class VideoGenerator:
             elif res.get("error"):
                 provider_notes.append(f"Hugging Face: {res.get('error')}")
 
-        # Try Replicate Video API if token is present
-        if providers["replicate"]:
-            self._update_job(job_id, progress=55, message="Synthesizing video with Replicate (SVD)...")
-            success, res = self._generate_replicate_video(prompt, mode, image_data)
-            if success:
-                self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
-                return
-            elif res.get("error"):
-                provider_notes.append(f"Replicate: {res.get('error')}")
-
         # Try ModelsLab if configured
         if providers["modelslab"]:
-            self._update_job(job_id, progress=65, message="Dispatching to ModelsLab Video API...")
+            self._update_job(job_id, progress=85, message="Dispatching to ModelsLab Video API...")
             success, res = self._generate_modelslab_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
@@ -180,14 +208,13 @@ class VideoGenerator:
         # 2. Honest Fallback When No Video Provider Is Ready
         # -------------------------------------------------------------
         logger.warning("No video generation API keys available or all failed for job %s", job_id)
-        error_details = "\n".join(provider_notes) if provider_notes else (
+        error_details = "\n\n".join(provider_notes) if provider_notes else (
             "No active AI Video Provider API key configured.\n"
             "High-performance video generation (Text-to-Video & Image-to-Video) requires GPU credits.\n"
             "To enable video generation, please configure one of the following in your .env file:\n"
             "- POLLINATIONS_API_KEY (with pollen credit from enter.pollinations.ai)\n"
-            "- HUGGINGFACE_API_KEY / HF_TOKEN (from huggingface.co/settings/tokens)\n"
-            "- REPLICATE_API_TOKEN (from replicate.com/account/api-tokens)\n"
-            "- MODELSLAB_API_KEY (from modelslab.com)"
+            "- REPLICATE_API_TOKEN (with credit from replicate.com/account/billing)\n"
+            "- HUGGINGFACE_API_KEY / HF_TOKEN (from huggingface.co/settings/tokens)"
         )
 
         self._update_job(
@@ -195,7 +222,7 @@ class VideoGenerator:
             status="failed",
             progress=100,
             error=error_details,
-            message="Video synthesis halted: No funded video provider available.",
+            message="Video synthesis halted: All configured video providers were unavailable or out of credit.",
         )
 
     def _generate_pollinations_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
@@ -221,38 +248,54 @@ class VideoGenerator:
                 return False, {"insufficient_balance": True}
 
             logger.warning("Pollinations video returned %d: %s", res.status_code, res.text[:120])
-            return False, {"error": f"HTTP {res.status_code}"}
+            return False, {"error": f"Pollinations returned HTTP {res.status_code}"}
         except Exception as e:
             logger.error("Pollinations video error: %s", e)
-            return False, {"error": str(e)}
+            return False, {"error": f"Pollinations connection error: {str(e)}"}
 
     def _generate_replicate_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
-        """Call Replicate video generation model (Stable Video Diffusion)."""
+        """Call Replicate video generation model (AnimateDiff for T2V, SVD for I2V)."""
         headers = {
             "Authorization": f"Bearer {self.replicate_token}",
             "Content-Type": "application/json",
         }
         
-        # SVD model deployment
         url = "https://api.replicate.com/v1/predictions"
-        payload = {
-            "version": "3f0457e4619da8151802e93e261ab87c2e2f0ed226599824bc731ad7ea126677",
-            "input": {
+        if mode == "image-to-video" or (image_data and mode != "text-to-video"):
+            version = "3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438"
+            payload_input = {
                 "input_image": image_data if image_data else "https://replicate.delivery/pbxt/JR3pZ2e60xZ56s8u6a7/demo.jpg",
                 "sizing_strategy": "maintain_aspect_ratio",
                 "frames_per_second": 6,
                 "motion_bucket_id": 127,
             }
-        }
+            model_label = "Stable Video Diffusion (SVD)"
+        else:
+            version = "beecf59c4aee8d81bf04f0381033dfa10dc16e845b4ae00d281e2fa377e48a9f"
+            payload_input = {
+                "prompt": prompt,
+                "n_prompt": "bad quality, blurry, low resolution, glitch, artifacts",
+                "steps": 25,
+            }
+            model_label = "AnimateDiff (T2V)"
+
+        payload = {"version": version, "input": payload_input}
+
         try:
             res = requests.post(url, headers=headers, json=payload, timeout=30)
             if not res.ok:
-                return False, {"error": f"Prediction failed with HTTP {res.status_code}"}
+                err_detail = "API error"
+                try:
+                    err_json = res.json()
+                    err_detail = err_json.get("detail") or err_json.get("title") or res.text[:120]
+                except Exception:
+                    err_detail = f"HTTP {res.status_code}"
+                return False, {"error": f"Replicate: {err_detail}"}
             
             pred = res.json()
             poll_url = pred.get("urls", {}).get("get")
             if not poll_url:
-                return False, {"error": "Missing poll URL from Replicate"}
+                return False, {"error": "Replicate: Missing poll URL"}
 
             # Poll for completion (up to 90s)
             for _ in range(30):
@@ -269,15 +312,15 @@ class VideoGenerator:
                             return True, {
                                 "video_bytes": vid_res.content,
                                 "provider": "Replicate AI",
-                                "model": "Stable Video Diffusion (SVD)",
+                                "model": model_label,
                             }
                 elif status in ("failed", "canceled"):
-                    return False, {"error": chk.get("error", "Replicate prediction failed")}
+                    return False, {"error": f"Replicate: {chk.get('error', 'Prediction failed')}"}
         except Exception as e:
             logger.error("Replicate video request error: %s", e)
-            return False, {"error": str(e)}
+            return False, {"error": f"Replicate error: {str(e)}"}
 
-        return False, {"error": "Replicate generation timed out"}
+        return False, {"error": "Replicate: Video generation timed out"}
 
     def _generate_hf_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
         """Call Hugging Face video model inference."""

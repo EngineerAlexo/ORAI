@@ -160,43 +160,44 @@ class VideoGenerator:
         providers = self.get_available_providers()
         provider_notes = []
 
-        # Try Pollinations Video if key is configured
+        # 1. Hugging Face ZeroGPU (Priority 1 - Free ZeroGPU Inference)
+        if providers["huggingface"]:
+            self._update_job(job_id, progress=25, message="Synthesizing video with Hugging Face ZeroGPU (LTX-Video)...")
+            success, res = self._generate_hf_video(prompt, mode, image_data)
+            if success:
+                self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
+                return
+            elif res.get("error"):
+                provider_notes.append(res.get("error"))
+                self._update_job(job_id, progress=45, message="Hugging Face busy. Switching to secondary video providers...")
+
+        # 2. Pollinations Video (Priority 2)
         if providers["pollinations"]:
-            self._update_job(job_id, progress=25, message="Synthesizing with Pollinations AI...")
+            self._update_job(job_id, progress=50, message="Synthesizing with Pollinations AI...")
             success, res = self._generate_pollinations_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
                 return
             elif res.get("insufficient_balance"):
                 provider_notes.append("Pollinations: Account has 0.00 pollen balance (~0.60 pollen required per video). Top up at https://enter.pollinations.ai")
-                self._update_job(job_id, progress=45, message="Pollinations balance is 0.00. Switching automatically to Replicate AI...")
+                self._update_job(job_id, progress=65, message="Pollinations balance is 0.00. Switching automatically to Replicate AI...")
             elif res.get("error"):
                 provider_notes.append(f"Pollinations: {res.get('error')}")
 
-        # Try Replicate Video API if token is present
+        # 3. Replicate Video API (Priority 3)
         if providers["replicate"]:
-            self._update_job(job_id, progress=60, message="Synthesizing video with Replicate AI...")
+            self._update_job(job_id, progress=70, message="Synthesizing video with Replicate AI...")
             success, res = self._generate_replicate_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
                 return
             elif res.get("error"):
                 provider_notes.append(res.get("error"))
-                self._update_job(job_id, progress=75, message="Replicate unavailable. Checking secondary engines...")
+                self._update_job(job_id, progress=85, message="Replicate unavailable. Checking ModelsLab...")
 
-        # Try Hugging Face Router API if token is present
-        if providers["huggingface"]:
-            self._update_job(job_id, progress=80, message="Attempting Hugging Face Inference...")
-            success, res = self._generate_hf_video(prompt, mode, image_data)
-            if success:
-                self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
-                return
-            elif res.get("error"):
-                provider_notes.append(f"Hugging Face: {res.get('error')}")
-
-        # Try ModelsLab if configured
+        # 4. ModelsLab (Priority 4)
         if providers["modelslab"]:
-            self._update_job(job_id, progress=85, message="Dispatching to ModelsLab Video API...")
+            self._update_job(job_id, progress=90, message="Dispatching to ModelsLab Video API...")
             success, res = self._generate_modelslab_video(prompt, mode, image_data)
             if success:
                 self._finalize_job_success(job_id, user_id, res["video_bytes"], prompt, aspect_ratio, res["provider"], res["model"])
@@ -323,25 +324,105 @@ class VideoGenerator:
         return False, {"error": "Replicate: Video generation timed out"}
 
     def _generate_hf_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
-        """Call Hugging Face video model inference."""
-        model = "damo-vilab/text-to-video-ms-1.7b"
-        url = f"https://router.huggingface.co/hf-inference/models/{model}"
-        headers = {"Authorization": f"Bearer {self.hf_token}"}
-        payload = {"inputs": prompt}
-
+        """Call free Hugging Face ZeroGPU space using gradio_client."""
         try:
-            res = requests.post(url, headers=headers, json=payload, timeout=120)
-            if res.ok and len(res.content) > 5000:
-                return True, {
-                    "video_bytes": res.content,
-                    "provider": "Hugging Face Inference",
-                    "model": model,
-                }
-            logger.warning("HF video failed with status %d: %s", res.status_code, res.text[:150])
-        except Exception as e:
-            logger.error("HF video request error: %s", e)
+            from gradio_client import Client, handle_file
+        except ImportError:
+            return False, {"error": "Hugging Face: gradio_client is not installed"}
 
-        return False, {}
+        token = self.hf_token
+        spaces = [
+            ("Lightricks/ltx-video-distilled", "Lightricks LTX-Video [Free ZeroGPU]"),
+            ("DeepRat/LTX-Video-ZeroGPU-Optimized", "LTX-Video ZeroGPU Optimized"),
+        ]
+
+        temp_img_file = None
+        if (mode == "image-to-video" or image_data) and image_data:
+            try:
+                if "," in image_data:
+                    b64_str = image_data.split(",", 1)[1]
+                else:
+                    b64_str = image_data
+                img_bytes = base64.b64decode(b64_str)
+                temp_img_file = Config.UPLOAD_DIR / f"temp_i2v_{uuid.uuid4().hex[:8]}.jpg"
+                with open(temp_img_file, "wb") as f:
+                    f.write(img_bytes)
+            except Exception as e:
+                logger.warning("Could not decode image_data for I2V: %s", e)
+
+        for space_name, model_label in spaces:
+            try:
+                logger.info("Attempting Hugging Face ZeroGPU Space: %s...", space_name)
+                client = Client(space_name, token=token)
+
+                if temp_img_file and temp_img_file.exists():
+                    # Call Image-to-Video endpoint
+                    res = client.predict(
+                        prompt=prompt,
+                        negative_prompt="blurry, low quality, jittery, distorted",
+                        input_image_filepath=handle_file(str(temp_img_file)),
+                        input_video_filepath=None,
+                        height_ui=512,
+                        width_ui=704,
+                        mode="image-to-video",
+                        duration_ui=2,
+                        ui_frames_to_use=9,
+                        seed_ui=42,
+                        randomize_seed=True,
+                        ui_guidance_scale=1,
+                        improve_texture_flag=True,
+                        api_name="/image_to_video"
+                    )
+                else:
+                    # Call Text-to-Video endpoint
+                    res = client.predict(
+                        prompt=prompt,
+                        negative_prompt="blurry, low quality, jittery, distorted",
+                        input_image_filepath=None,
+                        input_video_filepath=None,
+                        height_ui=512,
+                        width_ui=704,
+                        mode="text-to-video",
+                        duration_ui=2,
+                        ui_frames_to_use=9,
+                        seed_ui=42,
+                        randomize_seed=True,
+                        ui_guidance_scale=1,
+                        improve_texture_flag=True,
+                        api_name="/text_to_video"
+                    )
+
+                # Process returned video output
+                video_filepath = None
+                if isinstance(res, (tuple, list)) and len(res) > 0:
+                    video_info = res[0]
+                    if isinstance(video_info, dict):
+                        video_filepath = video_info.get("video")
+                    elif isinstance(video_info, str):
+                        video_filepath = video_info
+
+                if video_filepath and os.path.exists(video_filepath):
+                    with open(video_filepath, "rb") as vf:
+                        v_bytes = vf.read()
+                    if len(v_bytes) > 5000:
+                        if temp_img_file and temp_img_file.exists():
+                            try: temp_img_file.unlink()
+                            except Exception: pass
+                        return True, {
+                            "video_bytes": v_bytes,
+                            "provider": f"Hugging Face ({space_name})",
+                            "model": model_label,
+                        }
+
+            except Exception as e:
+                logger.warning("Space %s error: %s", space_name, e)
+                continue
+
+        if temp_img_file and temp_img_file.exists():
+            try: temp_img_file.unlink()
+            except Exception: pass
+
+        return False, {"error": "Hugging Face: ZeroGPU video spaces were busy. Please retry in a few moments."}
 
     def _generate_modelslab_video(self, prompt: str, mode: str, image_data: Optional[str]) -> Tuple[bool, Dict[str, Any]]:
         """Call ModelsLab text-to-video / image-to-video endpoint."""
@@ -355,6 +436,8 @@ class VideoGenerator:
             res = requests.post(url, json=payload, timeout=60)
             if res.ok:
                 data = res.json()
+                if data.get("status") == "error":
+                    return False, {"error": f"ModelsLab: {data.get('message', 'Subscription required')}"}
                 video_url = data.get("output", [None])[0] or data.get("video_url")
                 if video_url:
                     v_res = requests.get(video_url, timeout=90)
@@ -366,8 +449,9 @@ class VideoGenerator:
                         }
         except Exception as e:
             logger.error("ModelsLab video error: %s", e)
+            return False, {"error": f"ModelsLab connection error: {str(e)}"}
 
-        return False, {}
+        return False, {"error": "ModelsLab: Failed to synthesize video."}
 
     def _finalize_job_success(
         self,

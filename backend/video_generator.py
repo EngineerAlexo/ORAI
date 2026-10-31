@@ -356,7 +356,7 @@ class VideoGenerator:
             target_dur = float(duration) if duration else 4.0
         except (ValueError, TypeError):
             target_dur = 4.0
-        target_dur = max(1.0, min(8.0, target_dur))
+        target_dur = max(1.0, min(8.5, target_dur))
 
         temp_img_file = None
         if (mode == "image-to-video" or image_data) and image_data:
